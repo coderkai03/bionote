@@ -1,12 +1,22 @@
 'use client';
 
 import { useChat } from 'ai/react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function ChatPanel() {
   const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
     api: '/api/chat',
   });
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700">
@@ -36,7 +46,7 @@ export default function ChatPanel() {
                   Configuration Required
                 </h3>
                 <div className="mt-2 text-sm text-red-700 dark:text-red-300">
-                  <p>Please set up your OpenAI API key in the <code className="bg-red-100 dark:bg-red-900/50 px-1 py-0.5 rounded">.env.local</code> file. See <code className="bg-red-100 dark:bg-red-900/50 px-1 py-0.5 rounded">CHAT_SETUP.md</code> for instructions.</p>
+                  <p>Please set up your Groq API key in the <code className="bg-red-100 dark:bg-red-900/50 px-1 py-0.5 rounded">.env.local</code> file. See <code className="bg-red-100 dark:bg-red-900/50 px-1 py-0.5 rounded">CHAT_SETUP.md</code> for instructions.</p>
                 </div>
               </div>
             </div>
@@ -82,6 +92,9 @@ export default function ChatPanel() {
             </div>
           </div>
         )}
+        
+        {/* Invisible div for scrolling to bottom */}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input Form */}
