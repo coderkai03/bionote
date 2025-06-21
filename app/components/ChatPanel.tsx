@@ -1,6 +1,6 @@
 "use client";
 
-import { useChat } from "ai/react";
+import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef } from "react";
 
 export default function ChatPanel() {
@@ -28,7 +28,9 @@ export default function ChatPanel() {
         </h2>
         <div className="flex items-center space-x-2">
           <div
-            className={`w-2 h-2 rounded-full ${isLoading ? "bg-green-500 animate-pulse" : "bg-gray-400"}`}
+            className={`w-2 h-2 rounded-full ${
+              isLoading ? "bg-green-500 animate-pulse" : "bg-gray-400"
+            }`}
           ></div>
           <span className="text-sm text-gray-500 dark:text-gray-400">
             {isLoading ? "Typing..." : "Online"}
@@ -94,13 +96,15 @@ export default function ChatPanel() {
               </svg>
             </div>
             <p className="text-lg font-medium">Start a conversation</p>
-            <p className="text-sm">Ask me anything and I'll help you out!</p>
+            <p className="text-sm">Ask me anything and I&apos;ll help you out!</p>
           </div>
         ) : (
           messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              className={`flex ${
+                message.role === "user" ? "justify-end" : "justify-start"
+              }`}
             >
               <div
                 className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
