@@ -1,4 +1,3 @@
-import Image from "next/image";
 import ChatPanel from "./components/ChatPanel";
 
 export default function Home() {
@@ -12,8 +11,6 @@ export default function Home() {
               title="3d Animated Realistic Human Heart V1.0" 
               frameBorder="0" 
               allowFullScreen 
-              mozallowfullscreen="true" 
-              webkitallowfullscreen="true" 
               allow="autoplay; fullscreen; xr-spatial-tracking" 
               xr-spatial-tracking 
               execution-while-out-of-viewport 
