@@ -60,56 +60,37 @@ export function useChatInteractions() {
   const handleImageGeneration = async () => {
     setIsGeneratingImage(true);
     try {
-      interface CoreMessage {
-        id?: string;
-        role: "user" | "assistant" | "system";
-        content: string;
-      }
-      const filteredMessages = messages.filter(
-        (m) =>
-          m.role === "user" || m.role === "assistant" || m.role === "system"
-      ) as CoreMessage[];
-
-      const currentMessages: CoreMessage[] = [
-        ...filteredMessages,
-        {
-          id: Date.now().toString(),
-          role: "user" as const,
-          content: input,
-        },
-      ];
-
-      interface ImageGenerationRequest {
-        messages: typeof currentMessages;
-        data?: {
-          imageUrl?: string;
-        };
+      // Extract prompt from input (remove /image prefix)
+      const prompt = input.replace(/^\/image\s*/, "").trim();
+      
+      if (!prompt) {
+        throw new Error("Please provide a prompt after /image command");
       }
 
-      const requestData: ImageGenerationRequest = {
-        messages: currentMessages,
-      };
+      // Check if there's an image to edit
+      let imageUrl: string | null = null;
+      
+      if (screenshotFile) {
+        imageUrl = screenshotFile;
+      } else if (files && files[0] && files[0].type.startsWith("image/")) {
+        imageUrl = await fileToBase64(files[0]);
+      }
 
-      const imageData =
-        screenshotFile ||
-        (files && files[0] ? await fileToBase64(files[0]) : null);
-      if (imageData) {
-        requestData.data = { imageUrl: imageData };
+      if (!imageUrl) {
+        throw new Error("Please upload an image or take a screenshot to edit. Use /image [prompt] with an attached image.");
       }
 
       const userMessage = {
         id: Date.now().toString(),
         role: "user" as const,
         content: input,
-        experimental_attachments: imageData
-          ? [
-              {
-                name: "input.png",
-                contentType: "image/png",
-                url: imageData,
-              },
-            ]
-          : undefined,
+        experimental_attachments: [
+          {
+            name: "input_image.png",
+            contentType: "image/png",
+            url: imageUrl,
+          },
+        ],
       };
       setMessages((messages) => [...messages, userMessage]);
 
@@ -118,29 +99,24 @@ export function useChatInteractions() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify({ prompt, imageUrl }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate image");
+        throw new Error(errorData.error || "Failed to edit image");
       }
 
       const result = await response.json();
       if (result.imageUrl) {
-        let assistantContent = `Here's the generated image based on your prompt: "${result.prompt}"`;
-        if (result.demoMode) {
-          assistantContent = `🛠️ **Annotation Edit Mode**: ${result.message}\nEdited image based on your prompt: "${result.prompt}"`;
-        } else if (result.analysis) {
-          assistantContent = `I analyzed your image and generated a new one based on your request: "${result.prompt}"\n\nImage Analysis: ${result.analysis}`;
-        }
+        const assistantContent = `Here's your edited image based on the prompt: "${result.prompt}"`;
         const assistantMessage = {
           id: (Date.now() + 1).toString(),
           role: "assistant" as const,
           content: assistantContent,
           experimental_attachments: [
             {
-              name: result.demoMode ? "image.png" : "generated_image.png",
+              name: "edited_image.png",
               contentType: "image/png",
               url: result.imageUrl,
             },
@@ -149,11 +125,11 @@ export function useChatInteractions() {
         setMessages((prevMessages) => [...prevMessages, assistantMessage]);
       }
     } catch (error) {
-      console.error("Image generation error:", error);
+      console.error("Image editing error:", error);
       const errorMessage = {
         id: Date.now().toString(),
         role: "assistant" as const,
-        content: `Sorry, I couldn't generate the image. Error: ${
+        content: `Sorry, I couldn't edit the image. Error: ${
           error instanceof Error ? error.message : "Unknown error"
         }`,
       };
@@ -300,12 +276,7 @@ export function useChatInteractions() {
 
   const getStatusDisplay = () => {
     if (isGeneratingImage) {
-      const hasImageAttachment =
-        screenshotFile ||
-        (files && files[0] && files[0].type.startsWith("image/"));
-      return hasImageAttachment
-        ? "Editing image with AI..."
-        : "Generating image...";
+      return "Editing image...";
     }
     switch (status) {
       case "submitted":
