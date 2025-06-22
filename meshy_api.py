@@ -24,6 +24,7 @@ class GroqClient:
         """
         print(f"Refining prompt with Groq: '{user_prompt}'")
         try:
+            # !!! Fixing neeeded
             chat_completion = self.client.chat.completions.create(
                 messages=[
                     {
