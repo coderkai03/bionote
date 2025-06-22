@@ -7,9 +7,8 @@ from datetime import datetime, UTC
 from uagents import Agent, Context, Model
 from typing import List
 
-# 🔤 User input string (formatted flashcard)
-#userInput = "Create flashcard: Why is the heart red? | Because its bloood you dummy"
-userInput = "SET THE CHATBOT QUEREY HERE"
+# 🔤 User input string (formatted flashcard) - REMOVED
+# The API now only accepts POST requests to /create_flashcard endpoint
 
 def create_flashcard(front: str, back: str, filename="agent_card.csv"):
     """Create a flashcard and append it to the CSV file"""
@@ -59,25 +58,6 @@ async def startup(ctx: Context):
     ctx.logger.info(f"🌐 REST API: http://localhost:8000")
     ctx.logger.info(f"📝 POST /create_flashcard - Create new flashcard")
     ctx.logger.info(f"💓 GET /health - Health check")
-
-    def delayed_post():
-        time.sleep(2)  # Allow server to bind
-        if userInput.lower().startswith("create flashcard:") and "|" in userInput:
-            try:
-                parts = userInput[len("create flashcard:"):].strip().split("|", 1)
-                front = parts[0].strip()
-                back = parts[1].strip()
-                response = requests.post(
-                    "http://localhost:8000/create_flashcard",
-                    json={"front": front, "back": back}
-                )
-                print(f"📬 Flashcard POST Response: {response.status_code} - {response.json()}")
-            except Exception as e:
-                print(f"❌ Failed to parse or post flashcard: {e}")
-        else:
-            print("❌ Invalid input format. Please use: Create flashcard: FRONT | BACK")
-
-    threading.Thread(target=delayed_post).start()
 
 # Shutdown Event
 @agent.on_event("shutdown")
@@ -129,8 +109,10 @@ if __name__ == "__main__":
    • POST /create_flashcard - Create flashcard
    • GET /health - Health check
 
-🔗 Test input:
-   userInput = "Create flashcard: What is a leg? | its a leg"
+🔗 Test with curl:
+   curl -X POST http://localhost:8000/create_flashcard \
+        -H "Content-Type: application/json" \
+        -d '{"front": "What is a leg?", "back": "Its a leg"}'
 
 🛑 Stop with Ctrl+C
     """)

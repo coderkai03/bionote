@@ -46,6 +46,12 @@ export default function ChatPanel() {
   const handleFormSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
+    // Check if this is a flashcard creation request
+    if (input.trim().startsWith("/flashcard")) {
+      await handleFlashcardCreation();
+      return;
+    }
+
     // Check if this is an image generation request
     if (input.trim().startsWith("/image")) {
       await handleImageGeneration();
@@ -201,6 +207,92 @@ export default function ChatPanel() {
     }
   };
 
+  const handleFlashcardCreation = async () => {
+    try {
+      // Parse the flashcard command: /flashcard [front] | [back]
+      const command = input.trim();
+      const flashcardContent = command.replace(/^\/flashcard\s+/, '');
+      
+      if (!flashcardContent.includes('|')) {
+        throw new Error('Invalid format. Please use: /flashcard front content | back content');
+      }
+      
+      const [front, back] = flashcardContent.split('|').map(part => part.trim());
+      
+      if (!front || !back) {
+        throw new Error('Both front and back of the flashcard are required');
+      }
+
+      // Add user message to chat
+      const userMessage = {
+        id: Date.now().toString(),
+        role: "user" as const,
+        content: input,
+      };
+      setMessages((messages) => [...messages, userMessage]);
+
+      // Make request to flashcard service
+      const response = await fetch('http://localhost:8000/create_flashcard', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          front: front,
+          back: back,
+          filename: 'agent_card.csv'
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create flashcard');
+      }
+
+      const result = await response.json();
+      
+      // Add success message to chat
+      const assistantMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant" as const,
+        content: `✅ **Flashcard created successfully!**\n\n**Front:** ${front}\n**Back:** ${back}\n\n📁 Saved to: ${result.filename}\n⏰ Created at: ${new Date(result.timestamp).toLocaleString()}`,
+      };
+      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+      
+    } catch (error) {
+      console.error('Flashcard creation error:', error);
+      
+      // Add user message if not already added
+      const userMessage = {
+        id: Date.now().toString(),
+        role: "user" as const,
+        content: input,
+      };
+      
+      // Add error message to chat
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant" as const,
+        content: `❌ **Failed to create flashcard**\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\n💡 Please use the format: \`/flashcard front content | back content\`\n\nExample: \`/flashcard What is photosynthesis? | The process by which plants convert sunlight into energy\``,
+      };
+      
+      setMessages((prevMessages) => {
+        // Check if user message was already added
+        const lastMessage = prevMessages[prevMessages.length - 1];
+        if (lastMessage?.content === input && lastMessage?.role === 'user') {
+          return [...prevMessages, errorMessage];
+        } else {
+          return [...prevMessages, userMessage, errorMessage];
+        }
+      });
+    } finally {
+      // Clear the input
+      handleInputChange({
+        target: { value: "" },
+      } as React.ChangeEvent<HTMLInputElement>);
+    }
+  };
+
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -302,6 +394,13 @@ export default function ChatPanel() {
                       /image
                     </code>{" "}
                     followed by a description to generate images
+                  </li>
+                  <li>
+                    • Type{" "}
+                    <code className="bg-gray-700/50 px-1 rounded text-green-400">
+                      /flashcard
+                    </code>{" "}
+                    to create flashcards: /flashcard front | back
                   </li>
                   <li>
                     • Upload images with your{" "}
@@ -551,7 +650,7 @@ export default function ChatPanel() {
             <input
               value={input}
               onChange={handleInputChange}
-              placeholder="Type your message... (use /image for image generation)"
+              placeholder="Type your message... (use /image for images, /flashcard for flashcards)"
               className="flex-1 px-3 py-2 sm:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400 bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-lg text-sm sm:text-base min-w-0"
               disabled={isLoading || !!error}
             />
