@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { ShaderToy } from "./components/ui/ShaderToy";
 
 // Search result type
 interface SearchResult {
@@ -177,7 +178,8 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-800 text-white flex flex-col items-center justify-center px-4">
+    <main className="min-h-screen text-white flex flex-col items-center justify-center px-4">
+      <ShaderToy />
       <div className="text-center mb-8">
         <h1 className="text-6xl font-bold text-white mb-6 drop-shadow-2xl">
           What are we learning today?
