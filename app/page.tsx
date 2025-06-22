@@ -300,7 +300,7 @@ export default function Home() {
       // If no screen sharing is active, start it first
       await startScreenCapture();
       // Wait a moment for the stream to be ready
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
     const video = videoRef.current;
@@ -323,11 +323,11 @@ export default function Home() {
 
       // Get the position and size of the model container
       const containerRect = modelContainer.getBoundingClientRect();
-      
+
       // Create a canvas for cropping
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      
+
       if (!ctx) {
         throw new Error("Could not get canvas context");
       }
@@ -342,7 +342,7 @@ export default function Home() {
       const videoHeight = video.videoHeight;
       const screenWidth = window.screen.width;
       const screenHeight = window.screen.height;
-      
+
       const scaleX = videoWidth / screenWidth;
       const scaleY = videoHeight / screenHeight;
 
@@ -355,8 +355,14 @@ export default function Home() {
       // Draw the cropped video content
       ctx.drawImage(
         video,
-        sourceX, sourceY, sourceWidth, sourceHeight,  // Source rectangle
-        0, 0, canvas.width, canvas.height             // Destination rectangle
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight, // Source rectangle
+        0,
+        0,
+        canvas.width,
+        canvas.height // Destination rectangle
       );
 
       const screenshot = canvas.toDataURL("image/png");
@@ -408,7 +414,7 @@ export default function Home() {
           >
             ✏️
           </button>
-          
+
           {/* Model Container Capture Button - Always Available */}
           <button
             onClick={captureModelContainer}
@@ -417,7 +423,7 @@ export default function Home() {
           >
             📸
           </button>
-          
+
           {isDrawingActive && (
             <>
               <button
