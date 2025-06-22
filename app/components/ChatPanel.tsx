@@ -33,13 +33,13 @@ export default function ChatPanel() {
 
     window.addEventListener(
       "screenshot-captured",
-      handleScreenshotCaptured as EventListener
+      handleScreenshotCaptured as EventListener,
     );
 
     return () => {
       window.removeEventListener(
         "screenshot-captured",
-        handleScreenshotCaptured as EventListener
+        handleScreenshotCaptured as EventListener,
       );
     };
   }, []);
@@ -160,8 +160,8 @@ export default function ChatPanel() {
           content: result.demoMode
             ? `🛠️ **Demo Mode**: ${result.message}\n\nGenerated image based on your prompt: "${result.prompt}"`
             : result.analysis
-            ? `I analyzed your image and generated a new one based on your request: "${result.prompt}"\n\nImage Analysis: ${result.analysis}`
-            : `Here's the generated image based on your prompt: "${result.prompt}"`,
+              ? `I analyzed your image and generated a new one based on your request: "${result.prompt}"\n\nImage Analysis: ${result.analysis}`
+              : `Here's the generated image based on your prompt: "${result.prompt}"`,
           experimental_attachments: [
             {
               name: result.demoMode ? "demo_image.png" : "generated_image.png",
@@ -211,16 +211,20 @@ export default function ChatPanel() {
     try {
       // Parse the flashcard command: /flashcard [front] | [back]
       const command = input.trim();
-      const flashcardContent = command.replace(/^\/flashcard\s+/, '');
-      
-      if (!flashcardContent.includes('|')) {
-        throw new Error('Invalid format. Please use: /flashcard front content | back content');
+      const flashcardContent = command.replace(/^\/flashcard\s+/, "");
+
+      if (!flashcardContent.includes("|")) {
+        throw new Error(
+          "Invalid format. Please use: /flashcard front content | back content",
+        );
       }
-      
-      const [front, back] = flashcardContent.split('|').map(part => part.trim());
-      
+
+      const [front, back] = flashcardContent
+        .split("|")
+        .map((part) => part.trim());
+
       if (!front || !back) {
-        throw new Error('Both front and back of the flashcard are required');
+        throw new Error("Both front and back of the flashcard are required");
       }
 
       // Add user message to chat
@@ -232,54 +236,85 @@ export default function ChatPanel() {
       setMessages((messages) => [...messages, userMessage]);
 
       // Make request to flashcard service
-      const response = await fetch('http://localhost:8000/create_flashcard', {
-        method: 'POST',
+      const response = await fetch("http://0.0.0.0:8000/create_flashcard", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           front: front,
           back: back,
-          filename: 'agent_card.csv'
+          filename: "agent_card.csv",
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create flashcard');
+        throw new Error(errorData.message || "Failed to create flashcard");
       }
 
       const result = await response.json();
-      
-      // Add success message to chat
-      const assistantMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant" as const,
-        content: `✅ **Flashcard created successfully!**\n\n**Front:** ${front}\n**Back:** ${back}\n\n📁 Saved to: ${result.filename}\n⏰ Created at: ${new Date(result.timestamp).toLocaleString()}`,
-      };
-      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-      
+
+      // Download CSV file and prepare it for chat upload
+      try {
+        const csvResponse = await fetch("http://0.0.0.0:8000/download_csv");
+        if (csvResponse.ok) {
+          const csvData = await csvResponse.json();
+          if (csvData.status === "success" && csvData.content) {
+            // Convert base64 to data URL for attachment
+            const csvDataUrl = `data:text/csv;base64,${csvData.content}`;
+            
+            // Add success message with CSV attachment
+            const assistantMessage = {
+              id: (Date.now() + 1).toString(),
+              role: "assistant" as const,
+              content: `✅ **Flashcard created successfully!**\n\n**Front:** ${front}\n**Back:** ${back}\n\n📁 Saved to: ${result.filename}\n⏰ Created at: ${new Date(result.timestamp).toLocaleString()}\n\n📥 **CSV file is ready for download below**`,
+              experimental_attachments: [
+                {
+                  name: csvData.filename,
+                  contentType: "text/csv",
+                  url: csvDataUrl,
+                },
+              ],
+            };
+            setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+          } else {
+            throw new Error("Failed to get CSV content");
+          }
+        } else {
+          throw new Error("Failed to download CSV");
+        }
+      } catch (csvError) {
+        console.error("CSV download error:", csvError);
+        // Fallback to original message without CSV attachment
+        const assistantMessage = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant" as const,
+          content: `✅ **Flashcard created successfully!**\n\n**Front:** ${front}\n**Back:** ${back}\n\n📁 Saved to: ${result.filename}\n⏰ Created at: ${new Date(result.timestamp).toLocaleString()}\n\n⚠️ Note: CSV file created but could not be uploaded to chat for download`,
+        };
+        setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+      }
     } catch (error) {
-      console.error('Flashcard creation error:', error);
-      
+      console.error("Flashcard creation error:", error);
+
       // Add user message if not already added
       const userMessage = {
         id: Date.now().toString(),
         role: "user" as const,
         content: input,
       };
-      
+
       // Add error message to chat
       const errorMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant" as const,
-        content: `❌ **Failed to create flashcard**\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\n💡 Please use the format: \`/flashcard front content | back content\`\n\nExample: \`/flashcard What is photosynthesis? | The process by which plants convert sunlight into energy\``,
+        content: `❌ **Failed to create flashcard**\n\nError: ${error instanceof Error ? error.message : "Unknown error"}\n\n💡 Please use the format: \`/flashcard front content | back content\`\n\nExample: \`/flashcard What is photosynthesis? | The process by which plants convert sunlight into energy\``,
       };
-      
+
       setMessages((prevMessages) => {
         // Check if user message was already added
         const lastMessage = prevMessages[prevMessages.length - 1];
-        if (lastMessage?.content === input && lastMessage?.role === 'user') {
+        if (lastMessage?.content === input && lastMessage?.role === "user") {
           return [...prevMessages, errorMessage];
         } else {
           return [...prevMessages, userMessage, errorMessage];
@@ -351,8 +386,8 @@ export default function ChatPanel() {
                 isLoading
                   ? "bg-yellow-400 animate-pulse"
                   : hasError
-                  ? "bg-red-400"
-                  : "bg-green-400"
+                    ? "bg-red-400"
+                    : "bg-green-400"
               }`}
             />
             <span className="text-xs sm:text-sm text-gray-300 drop-shadow-sm">
@@ -444,18 +479,62 @@ export default function ChatPanel() {
                             key={index}
                             components={{
                               // Custom styling for markdown elements
-                              h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-white">{children}</h1>,
-                              h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-white">{children}</h2>,
-                              h3: ({ children }) => <h3 className="text-sm font-bold mb-1 text-white">{children}</h3>,
-                              p: ({ children }) => <p className="mb-2 text-white">{children}</p>,
-                              ul: ({ children }) => <ul className="list-disc list-inside mb-2 text-white">{children}</ul>,
-                              ol: ({ children }) => <ol className="list-decimal list-inside mb-2 text-white">{children}</ol>,
-                              li: ({ children }) => <li className="text-white">{children}</li>,
-                              strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
-                              em: ({ children }) => <em className="italic text-white">{children}</em>,
-                              code: ({ children }) => <code className="bg-gray-800 px-1 py-0.5 rounded text-xs font-mono text-green-400">{children}</code>,
-                              pre: ({ children }) => <pre className="bg-gray-800 p-2 rounded text-xs font-mono text-green-400 overflow-x-auto mb-2">{children}</pre>,
-                              blockquote: ({ children }) => <blockquote className="border-l-4 border-blue-500 pl-2 italic text-gray-300 mb-2">{children}</blockquote>,
+                              h1: ({ children }) => (
+                                <h1 className="text-lg font-bold mb-2 text-white">
+                                  {children}
+                                </h1>
+                              ),
+                              h2: ({ children }) => (
+                                <h2 className="text-base font-bold mb-2 text-white">
+                                  {children}
+                                </h2>
+                              ),
+                              h3: ({ children }) => (
+                                <h3 className="text-sm font-bold mb-1 text-white">
+                                  {children}
+                                </h3>
+                              ),
+                              p: ({ children }) => (
+                                <p className="mb-2 text-white">{children}</p>
+                              ),
+                              ul: ({ children }) => (
+                                <ul className="list-disc list-inside mb-2 text-white">
+                                  {children}
+                                </ul>
+                              ),
+                              ol: ({ children }) => (
+                                <ol className="list-decimal list-inside mb-2 text-white">
+                                  {children}
+                                </ol>
+                              ),
+                              li: ({ children }) => (
+                                <li className="text-white">{children}</li>
+                              ),
+                              strong: ({ children }) => (
+                                <strong className="font-bold text-white">
+                                  {children}
+                                </strong>
+                              ),
+                              em: ({ children }) => (
+                                <em className="italic text-white">
+                                  {children}
+                                </em>
+                              ),
+                              code: ({ children }) => (
+                                <code className="bg-gray-800 px-1 py-0.5 rounded text-xs font-mono text-green-400">
+                                  {children}
+                                </code>
+                              ),
+                              pre: ({ children }) => (
+                                <pre className="bg-gray-800 p-2 rounded text-xs font-mono text-green-400 overflow-x-auto mb-2">
+                                  {children}
+                                </pre>
+                              ),
+                              blockquote: ({ children }) => (
+                                <blockquote className="border-l-4 border-blue-500 pl-2 italic text-gray-300 mb-2">
+                                  {children}
+                                </blockquote>
+                              ),
                             }}
                           >
                             {part.text}
@@ -467,18 +546,60 @@ export default function ChatPanel() {
                     }) || (
                       <ReactMarkdown
                         components={{
-                          h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-white">{children}</h1>,
-                          h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-white">{children}</h2>,
-                          h3: ({ children }) => <h3 className="text-sm font-bold mb-1 text-white">{children}</h3>,
-                          p: ({ children }) => <p className="mb-2 text-white">{children}</p>,
-                          ul: ({ children }) => <ul className="list-disc list-inside mb-2 text-white">{children}</ul>,
-                          ol: ({ children }) => <ol className="list-decimal list-inside mb-2 text-white">{children}</ol>,
-                          li: ({ children }) => <li className="text-white">{children}</li>,
-                          strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
-                          em: ({ children }) => <em className="italic text-white">{children}</em>,
-                          code: ({ children }) => <code className="bg-gray-800 px-1 py-0.5 rounded text-xs font-mono text-green-400">{children}</code>,
-                          pre: ({ children }) => <pre className="bg-gray-800 p-2 rounded text-xs font-mono text-green-400 overflow-x-auto mb-2">{children}</pre>,
-                          blockquote: ({ children }) => <blockquote className="border-l-4 border-blue-500 pl-2 italic text-gray-300 mb-2">{children}</blockquote>,
+                          h1: ({ children }) => (
+                            <h1 className="text-lg font-bold mb-2 text-white">
+                              {children}
+                            </h1>
+                          ),
+                          h2: ({ children }) => (
+                            <h2 className="text-base font-bold mb-2 text-white">
+                              {children}
+                            </h2>
+                          ),
+                          h3: ({ children }) => (
+                            <h3 className="text-sm font-bold mb-1 text-white">
+                              {children}
+                            </h3>
+                          ),
+                          p: ({ children }) => (
+                            <p className="mb-2 text-white">{children}</p>
+                          ),
+                          ul: ({ children }) => (
+                            <ul className="list-disc list-inside mb-2 text-white">
+                              {children}
+                            </ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="list-decimal list-inside mb-2 text-white">
+                              {children}
+                            </ol>
+                          ),
+                          li: ({ children }) => (
+                            <li className="text-white">{children}</li>
+                          ),
+                          strong: ({ children }) => (
+                            <strong className="font-bold text-white">
+                              {children}
+                            </strong>
+                          ),
+                          em: ({ children }) => (
+                            <em className="italic text-white">{children}</em>
+                          ),
+                          code: ({ children }) => (
+                            <code className="bg-gray-800 px-1 py-0.5 rounded text-xs font-mono text-green-400">
+                              {children}
+                            </code>
+                          ),
+                          pre: ({ children }) => (
+                            <pre className="bg-gray-800 p-2 rounded text-xs font-mono text-green-400 overflow-x-auto mb-2">
+                              {children}
+                            </pre>
+                          ),
+                          blockquote: ({ children }) => (
+                            <blockquote className="border-l-4 border-blue-500 pl-2 italic text-gray-300 mb-2">
+                              {children}
+                            </blockquote>
+                          ),
                         }}
                       >
                         {message.content}
@@ -492,7 +613,7 @@ export default function ChatPanel() {
                       <div className="mt-2 sm:mt-3 space-y-2">
                         {message.experimental_attachments
                           .filter((attachment) =>
-                            attachment.contentType?.startsWith("image/")
+                            attachment.contentType?.startsWith("image/"),
                           )
                           .map((attachment, index) => (
                             <div
@@ -521,28 +642,44 @@ export default function ChatPanel() {
                         {message.experimental_attachments
                           .filter(
                             (attachment) =>
-                              !attachment.contentType?.startsWith("image/")
+                              !attachment.contentType?.startsWith("image/"),
                           )
-                          .map((attachment, index) => (
-                            <div
-                              key={`file-${message.id}-${index}`}
-                              className="bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-gray-600"
-                            >
-                              <div className="flex items-center space-x-2">
-                                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-600 rounded flex items-center justify-center flex-shrink-0">
-                                  <span className="text-xs">📄</span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs sm:text-sm font-medium text-white truncate">
-                                    {attachment.name || "Unknown file"}
+                          .map((attachment, index) => {
+                            const handleDownload = () => {
+                              // Create a temporary link element
+                              const link = document.createElement('a');
+                              link.href = attachment.url;
+                              link.download = attachment.name || 'download';
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            };
+                            
+                            return (
+                              <div
+                                key={`file-${message.id}-${index}`}
+                                className="bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-gray-600 cursor-pointer hover:bg-gray-700/50 transition-colors"
+                                onClick={handleDownload}
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-600 rounded flex items-center justify-center flex-shrink-0">
+                                    <span className="text-xs">📥</span>
                                   </div>
-                                  <div className="text-xs text-gray-400">
-                                    {attachment.contentType || "Unknown type"}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs sm:text-sm font-medium text-white truncate">
+                                      {attachment.name || "Unknown file"}
+                                    </div>
+                                    <div className="text-xs text-gray-400">
+                                      {attachment.contentType || "Unknown type"} • Click to download
+                                    </div>
+                                  </div>
+                                  <div className="text-blue-400 text-xs font-medium">
+                                    ⬇️ Download
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                       </div>
                     )}
                 </div>

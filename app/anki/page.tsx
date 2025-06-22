@@ -1,4 +1,4 @@
-import AnkiGenerator from "../components/AnkiGenerator";
+// import AnkiGenerator from "../components/AnkiGenerator";
 
 export default function AnkiPage() {
   return (
@@ -15,7 +15,7 @@ export default function AnkiPage() {
           </p>
         </div>
 
-        <AnkiGenerator />
+        {/* <AnkiGenerator /> */}
 
         <div className="mt-12 text-center">
           <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
