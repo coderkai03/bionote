@@ -92,6 +92,45 @@ export default function ChatPanel() {
   const isLoading = status === "submitted" || status === "streaming";
   const hasError = status === "error" || error;
 
+  // Listen for screenshot events from DrawingOverlay
+  useEffect(() => {
+    const handleScreenshotCaptured = (event: CustomEvent) => {
+      const { base64 } = event.detail;
+      setScreenshotPreview(base64);
+    };
+
+    window.addEventListener('screenshot-captured', handleScreenshotCaptured as EventListener);
+    
+    return () => {
+      window.removeEventListener('screenshot-captured', handleScreenshotCaptured as EventListener);
+    };
+  }, []);
+
+  const removeScreenshot = () => {
+    setScreenshotPreview(null);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    // Don't submit if there's no input and no image
+    if (!input.trim() && !screenshotPreview) return;
+
+    // Use the `append` function to send a structured message
+    // with text and image data.
+    append({
+        role: 'user',
+        content: input,
+        data: {
+            imageUrl: screenshotPreview
+        }
+    });
+    
+    // Clear the input and the preview after submission
+    setInput('');
+    setScreenshotPreview(null);
+  };
+
   return (
     <>
       <div
