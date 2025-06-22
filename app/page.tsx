@@ -240,7 +240,7 @@ export default function Home() {
         const rect = modelRef.current.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
-        ctx.strokeStyle = "red";
+        ctx.strokeStyle = "#87CEEB"; // Light blue color
         ctx.lineWidth = 3;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
@@ -405,18 +405,6 @@ export default function Home() {
     }
   };
 
-  const captureCanvasDrawing = () => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const dataUrl = canvas.toDataURL("image/png");
-
-      const event = new CustomEvent("screenshot-captured", {
-        detail: { base64: dataUrl },
-      });
-      window.dispatchEvent(event);
-    }
-  };
-
   return (
     <div className="flex h-screen bg-gray-900">
       {/* Left Panel - 3D Model Full Screen */}
@@ -460,14 +448,7 @@ export default function Home() {
                 className="p-2 bg-white text-gray-700 rounded-lg shadow-lg hover:bg-gray-100 transition-all duration-200"
                 title="Clear Drawing"
               >
-                🖌️
-              </button>
-              <button
-                onClick={captureCanvasDrawing}
-                className="p-2 bg-blue-500 text-white rounded-lg shadow-lg hover:bg-blue-600 transition-all duration-200"
-                title="Send Drawing to Chat"
-              >
-                💬
+                🗑️
               </button>
             </>
           )}

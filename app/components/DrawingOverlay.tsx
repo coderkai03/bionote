@@ -34,7 +34,7 @@ export default function DrawingOverlay({
       if (iframe) {
         canvas.width = iframe.offsetWidth;
         canvas.height = iframe.offsetHeight;
-        ctx.strokeStyle = "white";
+        ctx.strokeStyle = '#87CEEB'; // Light blue color
         ctx.lineWidth = 3;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
@@ -72,6 +72,10 @@ export default function DrawingOverlay({
       const canvas = canvasRef.current;
       const ctx = canvas?.getContext("2d");
       if (ctx) {
+        ctx.strokeStyle = '#87CEEB'; // Light blue color
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(pos.x, pos.y);
       }
@@ -95,6 +99,7 @@ export default function DrawingOverlay({
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext("2d");
         if (ctx) {
+          ctx.strokeStyle = '#87CEEB'; // Light blue color
           ctx.lineTo(pos.x, pos.y);
           ctx.stroke();
         }
@@ -106,7 +111,8 @@ export default function DrawingOverlay({
       const ctx = canvas?.getContext("2d");
       if (ctx && canvas) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+        ctx.strokeStyle = '#87CEEB'; // Light blue color
+        
         const start = circleStartRef.current;
         const radius = Math.sqrt(
           Math.pow(pos.x - start.x, 2) + Math.pow(pos.y - start.y, 2)
@@ -137,6 +143,7 @@ export default function DrawingOverlay({
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext("2d");
         if (ctx && canvas) {
+          ctx.strokeStyle = '#87CEEB'; // Light blue color
           const start = circleStartRef.current;
           const radius = Math.sqrt(
             Math.pow(pos.x - start.x, 2) + Math.pow(pos.y - start.y, 2)
