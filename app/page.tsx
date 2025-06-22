@@ -295,29 +295,70 @@ export default function Home() {
     }
   };
 
-  const captureScreenshot = async () => {
+  const captureModelContainer = async () => {
     if (!mediaStream || !videoRef.current) {
-      alert("Screen capture is not active. Please start screen sharing first.");
-      return;
+      // If no screen sharing is active, start it first
+      await startScreenCapture();
+      // Wait a moment for the stream to be ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     const video = videoRef.current;
+    if (!video || !mediaStream) {
+      alert("Please start screen sharing first to capture the model view.");
+      return;
+    }
+
     if (video.readyState < video.HAVE_METADATA) {
       console.warn("Video not ready for screenshot yet.");
       return;
     }
 
     try {
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
+      const modelContainer = modelRef.current;
+      if (!modelContainer) {
+        console.error("Model container not found");
+        return;
+      }
 
+      // Get the position and size of the model container
+      const containerRect = modelContainer.getBoundingClientRect();
+      
+      // Create a canvas for cropping
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      
       if (!ctx) {
         throw new Error("Could not get canvas context");
       }
 
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      // Set canvas size to match the model container
+      canvas.width = containerRect.width;
+      canvas.height = containerRect.height;
+
+      // Draw the cropped portion of the video onto the canvas
+      // We need to calculate the scale factor between video and screen
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
+      const screenWidth = window.screen.width;
+      const screenHeight = window.screen.height;
+      
+      const scaleX = videoWidth / screenWidth;
+      const scaleY = videoHeight / screenHeight;
+
+      // Calculate the source rectangle in video coordinates
+      const sourceX = containerRect.left * scaleX;
+      const sourceY = containerRect.top * scaleY;
+      const sourceWidth = containerRect.width * scaleX;
+      const sourceHeight = containerRect.height * scaleY;
+
+      // Draw the cropped video content
+      ctx.drawImage(
+        video,
+        sourceX, sourceY, sourceWidth, sourceHeight,  // Source rectangle
+        0, 0, canvas.width, canvas.height             // Destination rectangle
+      );
+
       const screenshot = canvas.toDataURL("image/png");
 
       const event = new CustomEvent("screenshot-captured", {
@@ -325,7 +366,7 @@ export default function Home() {
       });
       window.dispatchEvent(event);
     } catch (error) {
-      console.error("Failed to capture screenshot:", error);
+      console.error("Failed to capture model container:", error);
     }
   };
 
@@ -367,6 +408,16 @@ export default function Home() {
           >
             ✏️
           </button>
+          
+          {/* Model Container Capture Button - Always Available */}
+          <button
+            onClick={captureModelContainer}
+            className="p-2 bg-green-500 text-white rounded-lg shadow-lg hover:bg-green-600 transition-all duration-200"
+            title="Capture Model View"
+          >
+            📸
+          </button>
+          
           {isDrawingActive && (
             <>
               <button
@@ -374,30 +425,14 @@ export default function Home() {
                 className="p-2 bg-white text-gray-700 rounded-lg shadow-lg hover:bg-gray-100 transition-all duration-200"
                 title="Clear Drawing"
               >
-                🗑️
+                �️
               </button>
               <button
                 onClick={captureCanvasDrawing}
                 className="p-2 bg-blue-500 text-white rounded-lg shadow-lg hover:bg-blue-600 transition-all duration-200"
                 title="Send Drawing to Chat"
               >
-                💬
-              </button>
-              <button
-                onClick={captureScreenshot}
-                disabled={!mediaStream}
-                className={`p-2 rounded-lg shadow-lg transition-all duration-200 ${
-                  mediaStream
-                    ? "bg-white text-gray-700 hover:bg-gray-100"
-                    : "bg-gray-400 text-gray-600 cursor-not-allowed"
-                }`}
-                title={
-                  mediaStream
-                    ? "Take Screenshot"
-                    : "Start screen sharing to take screenshots"
-                }
-              >
-                📸
+                �
               </button>
             </>
           )}

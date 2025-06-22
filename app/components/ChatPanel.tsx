@@ -2,7 +2,6 @@
 
 import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef, useState } from "react";
-import { useScreenCapture } from "../lib/useScreenCapture";
 import {
   Button,
   IconButton,
@@ -13,31 +12,31 @@ import {
 
 export default function ChatPanel() {
   const [imageFile, setImageFile] = useState<string | null>(null);
+  const [sentImageFile, setSentImageFile] = useState<string | null>(null);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, error } =
     useChat({
       api: "/api/chat",
-      body: {
-        data: { imageUrl: imageFile },
-      },
     });
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const {
-    isCapturing,
-    startCapture,
-    captureScreenshot,
-    error: captureError,
-  } = useScreenCapture();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  // Clear sent image when a new assistant message arrives
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === "assistant" && sentImageFile) {
+        // Clear the sent image after assistant responds
+        setTimeout(() => setSentImageFile(null), 1000);
+      }
+    }
+  }, [messages, sentImageFile]);
 
   // Listen for screenshot events from page.tsx
   useEffect(() => {
@@ -59,18 +58,6 @@ export default function ChatPanel() {
       );
     };
   }, []);
-
-  const handleScreenshot = async () => {
-    if (!isCapturing) {
-      await startCapture();
-    } else {
-      const screenshot = await captureScreenshot();
-      if (screenshot) {
-        setImageFile(screenshot);
-      }
-    }
-  };
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -80,11 +67,23 @@ export default function ChatPanel() {
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const customSubmit = (e: React.FormEvent) => {
-    handleSubmit(e);
-    setImageFile(null); // Clear image after sending
+  };  const customSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Store the image before submitting
+    if (imageFile) {
+      setSentImageFile(imageFile);
+    }
+    
+    // Submit with image data
+    handleSubmit(e, {
+      data: {
+        imageUrl: imageFile,
+      },
+    });
+    
+    // Clear the image file for next upload
+    setImageFile(null);
   };
 
   const getErrorMessage = (error: string | Error | null): string => {
@@ -101,22 +100,12 @@ export default function ChatPanel() {
         boxShadow:
           "inset 0 0 50px rgba(255,255,255,0.05), 0 0 30px rgba(0,0,0,0.3)",
       }}
-    >
-      {/* Header with Tools */}
+    >      {/* Header with Tools */}
       <div className="flex items-center justify-between p-4 border-b border-gray-700/50 relative z-10">
         <h2 className="text-lg font-semibold text-white drop-shadow-sm">
           Chat Assistant
         </h2>
         <div className="flex items-center space-x-2">
-          <IconButton
-            icon="📷"
-            onClick={handleScreenshot}
-            variant={isCapturing ? "success" : "secondary"}
-            size="sm"
-            tooltip="Screen Capture"
-          >
-            {""}
-          </IconButton>
           <StatusIndicator
             isActive={isLoading}
             activeText="Typing..."
@@ -124,18 +113,16 @@ export default function ChatPanel() {
             className="ml-2"
           />
         </div>
-      </div>
-
-      {/* Messages */}
+      </div>      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10">
-        {(error || captureError) && (
+        {error && (
           <ErrorAlert
             title="Error"
-            message={getErrorMessage(error || captureError)}
+            message={getErrorMessage(error)}
           />
         )}
 
-        {messages.length === 0 && !error && !captureError ? (
+        {messages.length === 0 && !error ? (
           <div className="text-center text-gray-400 mt-8">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5 shadow-lg">
               <span className="text-2xl">💬</span>
@@ -146,8 +133,7 @@ export default function ChatPanel() {
             <p className="text-sm text-gray-400 drop-shadow-sm">
               Ask me anything and I&apos;ll help you out!
             </p>
-          </div>
-        ) : (
+          </div>        ) : (
           messages.map((message) => (
             <div
               key={message.id}
@@ -168,7 +154,18 @@ export default function ChatPanel() {
                       : "0 4px 15px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
                   backdropFilter: "blur(10px)",
                 }}
-              >
+              >                {/* Display image if present in message data */}
+                {message.role === "user" && sentImageFile && message === messages[messages.length - 1] && (
+                  <div className="mb-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={sentImageFile}
+                      alt="Shared content"
+                      className="w-full max-w-48 rounded-lg shadow-lg border border-white/20"
+                      style={{ maxHeight: "200px", objectFit: "cover" }}
+                    />
+                  </div>
+                )}
                 <p className="text-sm whitespace-pre-wrap drop-shadow-sm">
                   {message.content}
                 </p>
@@ -189,9 +186,9 @@ export default function ChatPanel() {
       </div>
 
       {/* Input Form */}
-      <div className="p-4 border-t border-gray-700/50 relative z-10 bg-gradient-to-r from-white/3 to-transparent">
-        {imageFile && (
+      <div className="p-4 border-t border-gray-700/50 relative z-10 bg-gradient-to-r from-white/3 to-transparent">        {imageFile && (
           <div className="mb-3 flex items-center space-x-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageFile}
               alt="Upload preview"
@@ -226,19 +223,17 @@ export default function ChatPanel() {
             >
               {""}
             </IconButton>
-          </label>
-
-          <input
+          </label>          <input
             value={input}
             onChange={handleInputChange}
             placeholder="Type your message..."
             className="flex-1 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400 bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-lg"
-            disabled={isLoading || !!(error || captureError)}
+            disabled={isLoading || !!error}
           />
 
           <Button
             type="submit"
-            disabled={isLoading || !input.trim() || !!(error || captureError)}
+            disabled={isLoading || !input.trim() || !!error}
             variant="primary"
             size="md"
             isLoading={isLoading}

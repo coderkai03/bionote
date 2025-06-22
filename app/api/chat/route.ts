@@ -33,8 +33,10 @@ export async function POST(req: Request) {
     const { messages, data }: ChatRequest = await req.json();
 
     console.log(`Received ${messages.length} messages.`);
+    console.log("Request data:", data);
     if (data?.imageUrl) {
-      console.log(`Image URL received, processing for model...`);
+      console.log(`Image URL received, length: ${data.imageUrl.length} characters`);
+      console.log(`Image type: ${data.imageUrl.startsWith('data:') ? 'base64' : 'URL'}`);
     }
 
     // Validate API key
