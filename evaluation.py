@@ -102,7 +102,7 @@ def analyze_webpages(urls):
                 # Navigate to the page
                 driver.get(url)
                 # Wait a moment for the page to render completely
-                time.sleep(10)  # Increased wait time for 3D models to load
+                time.sleep(2)  # Increased wait time for 3D models to load
 
                 # Find the main body of the page
                 body = driver.find_element(By.TAG_NAME, "body")
@@ -111,7 +111,7 @@ def analyze_webpages(urls):
                 # Note: This action may not have a visible effect on many websites.
                 print("Performing left-click...")
                 ActionChains(driver).move_to_element(body).click().perform()
-                time.sleep(1)  # Wait a moment after the click
+                time.sleep(12)  # Wait a moment after the click
 
                 # Take a screenshot
                 print("Taking screenshot...")
@@ -120,9 +120,9 @@ def analyze_webpages(urls):
 
                 # Prepare the prompt for Gemini
                 prompt = (
-                    "Look at the following screenshot of a webpage. "
+                    "Look at the following screenshot of a webpage."
                     "Does this page display a 3D model of a Mechanical engineering crane or related "
-                    "industrial machinery? Please answer with a simple 'Yes' or 'No' "
+                    "industrial machinery? Please answer with a simple 'Yes' or 'No'. If it says loading model skip the model please and just say no. "
                     "and provide a brief one-sentence explanation."
                 )
 
