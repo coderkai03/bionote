@@ -115,6 +115,22 @@ export default function ChatPanel() {
         requestData.data = { imageUrl: imageData };
       }
 
+      const userMessage = {
+        id: Date.now().toString(),
+        role: "user" as const,
+        content: input,
+        experimental_attachments: imageData
+          ? [
+              {
+                name: "input.png",
+                contentType: "image/png",
+                url: imageData,
+              },
+            ]
+          : undefined,
+      };
+      setMessages((messages) => [...messages, userMessage]);
+
       // Call the image generation API
       const response = await fetch("/api/image-generation", {
         method: "POST",
@@ -131,21 +147,6 @@ export default function ChatPanel() {
 
       const result = await response.json();
       if (result.imageUrl) {
-        // Add both user message and assistant response with the generated image
-        const userMessage = {
-          id: Date.now().toString(),
-          role: "user" as const,
-          content: input,
-          experimental_attachments: imageData
-            ? [
-                {
-                  name: "input.png",
-                  contentType: "image/png",
-                  url: imageData,
-                },
-              ]
-            : undefined,
-        };
         const assistantMessage = {
           id: (Date.now() + 1).toString(),
           role: "assistant" as const,
@@ -164,7 +165,7 @@ export default function ChatPanel() {
         };
 
         // Update the messages using setMessages
-        setMessages([...messages, userMessage, assistantMessage]);
+        setMessages((prevMessages) => [...prevMessages, assistantMessage]);
       }
     } catch (error) {
       console.error("Image generation error:", error);

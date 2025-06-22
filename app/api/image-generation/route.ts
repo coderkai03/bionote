@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "edge";
 export const maxDuration = 60;
-
+export const revalidate = 0; // Disable caching for this route
+export const dynamic = "force-dynamic"; // Force dynamic rendering
 interface CoreMessage {
   id?: string;
   role: "user" | "assistant" | "system";
@@ -17,8 +18,8 @@ interface ImageGenerationRequest {
 }
 
 export async function POST(req: NextRequest) {
+  await new Promise(resolve => setTimeout(resolve, 15000));
   console.log("--- IMAGE GENERATION API REQUEST RECEIVED ---");
-
   try {
     const body: ImageGenerationRequest = await req.json();
     const { messages, data } = body;
@@ -69,9 +70,7 @@ export async function POST(req: NextRequest) {
 
         // Return the image as base64 data URL
         const imageDataUrl = `data:image/png;base64,${base64String}`;
-        setTimeout(() => {
-          console.log("Demo image processing complete");
-        }, 15000); // Simulate processing delay
+        // Simulate processing delay
         return NextResponse.json({
           imageUrl: imageDataUrl,
           prompt: prompt,
