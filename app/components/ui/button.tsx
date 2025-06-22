@@ -1,6 +1,6 @@
 "use client";
 
-import { type Message, type JSONValue } from "@ai-sdk/react";
+import { type Message } from "@ai-sdk/react";
 import Image from "next/image";
 
 // --- Type Guards & Helpers ---
@@ -10,7 +10,7 @@ import Image from "next/image";
  * @param data The data payload from a message.
  * @returns True if the data is an object with a string `imageUrl` property.
  */
-const isImageData = (data: JSONValue): data is { imageUrl: string } => {
+const isImageData = (data: Message["data"]): data is { imageUrl: string } => {
   return (
     data != null &&
     typeof data === "object" &&
@@ -72,10 +72,8 @@ export const LoadingDots = () => (
  */
 export const ErrorAlert = ({
   title,
-  message,
 }: {
   title: string;
-  message: string;
 }) => (
   <div
     className="rounded-lg p-4"
