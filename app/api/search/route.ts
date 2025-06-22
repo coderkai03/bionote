@@ -6,7 +6,9 @@ export const runtime = "edge";
 async function searchMyModels(keywords: string) {
   const main_word = keywords.split(",")[0];
 
-  const url = `https://api.sketchfab.com/v3/search?type=models&q=${encodeURIComponent(main_word)}&tags=${encodeURIComponent(keywords)}&archives_flavours=false`;
+  const url = `https://api.sketchfab.com/v3/search?type=models&q=${encodeURIComponent(
+    main_word
+  )}&tags=${encodeURIComponent(keywords)}&archives_flavours=false`;
   console.log(url);
   const response = await fetch(url, {
     headers: {
@@ -21,12 +23,19 @@ async function searchMyModels(keywords: string) {
 
   const data = await response.json();
 
-  const parsed_data = data.results.map((model) => ({
-    name: model.name,
-    uid: model.uid,
-    viewerUrl: model.viewerUrl,
-    embedURL: model.embedUrl,
-  }));
+  const parsed_data = data.results.map(
+    (model: {
+      name: string;
+      uid: string;
+      viewerUrl: string;
+      embedUrl: string;
+    }) => ({
+      name: model.name,
+      uid: model.uid,
+      viewerUrl: model.viewerUrl,
+      embedURL: model.embedUrl,
+    })
+  );
 
   return parsed_data;
 }
@@ -68,20 +77,22 @@ export async function POST(req: Request) {
     console.error("=== CHAT API ERROR ===");
     console.error(
       "Error type:",
-      error instanceof Error ? error.constructor.name : typeof error,
+      error instanceof Error ? error.constructor.name : typeof error
     );
     console.error(
       "Error message:",
-      error instanceof Error ? error.message : String(error),
+      error instanceof Error ? error.message : String(error)
     );
     console.error(
       "Error stack:",
-      error instanceof Error ? error.stack : "No stack trace",
+      error instanceof Error ? error.stack : "No stack trace"
     );
     console.error("Full error object:", error);
     return new Response(
-      `Internal Server Error: ${error instanceof Error ? error.message : String(error)}`,
-      { status: 500 },
+      `Internal Server Error: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      { status: 500 }
     );
   }
 }
