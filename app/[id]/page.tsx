@@ -240,7 +240,7 @@ export default function Home() {
         const rect = modelRef.current.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
-        ctx.strokeStyle = "red";
+        ctx.strokeStyle = "#87CEEB";
         ctx.lineWidth = 3;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
@@ -416,7 +416,7 @@ export default function Home() {
       window.dispatchEvent(event);
     }
   };
-  
+
   return (
     <div className="flex h-screen bg-gray-900">
       {/* Left Panel - 3D Model Full Screen */}
