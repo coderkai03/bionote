@@ -2,6 +2,7 @@
 
 import { Message } from "@ai-sdk/react";
 import Image from "next/image";
+import ReactMarkdown from "react-markdown";
 
 interface MessageItemProps {
   message: Message;
@@ -36,11 +37,133 @@ export default function MessageItem({
         <div className="whitespace-pre-wrap text-xs sm:text-sm drop-shadow-sm leading-relaxed">
           {message.parts?.map((part, index) => {
             if (part.type === "text") {
-              return <div key={index}>{part.text}</div>;
+              return (
+                <ReactMarkdown
+                  key={index}
+                  components={{
+                    // Custom styling for markdown elements
+                    h1: ({ children }) => (
+                      <h1 className="text-lg font-bold mb-2 text-white">
+                        {children}
+                      </h1>
+                    ),
+                    h2: ({ children }) => (
+                      <h2 className="text-base font-bold mb-2 text-white">
+                        {children}
+                      </h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 className="text-sm font-bold mb-1 text-white">
+                        {children}
+                      </h3>
+                    ),
+                    p: ({ children }) => (
+                      <p className="mb-2 text-white">{children}</p>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className="list-disc list-inside mb-2 text-white">
+                        {children}
+                      </ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="list-decimal list-inside mb-2 text-white">
+                        {children}
+                      </ol>
+                    ),
+                    li: ({ children }) => (
+                      <li className="text-white">{children}</li>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className="font-bold text-white">
+                        {children}
+                      </strong>
+                    ),
+                    em: ({ children }) => (
+                      <em className="italic text-white">{children}</em>
+                    ),
+                    code: ({ children }) => (
+                      <code className="bg-gray-800 px-1 py-0.5 rounded text-xs font-mono text-green-400">
+                        {children}
+                      </code>
+                    ),
+                    pre: ({ children }) => (
+                      <pre className="bg-gray-800 p-2 rounded text-xs font-mono text-green-400 overflow-x-auto mb-2">
+                        {children}
+                      </pre>
+                    ),
+                    blockquote: ({ children }) => (
+                      <blockquote className="border-l-4 border-blue-500 pl-2 italic text-gray-300 mb-2">
+                        {children}
+                      </blockquote>
+                    ),
+                  }}
+                >
+                  {part.text}
+                </ReactMarkdown>
+              );
             }
             // Handle other part types if needed
             return null;
-          }) || message.content}
+          }) || (
+            <ReactMarkdown
+              components={{
+                h1: ({ children }) => (
+                  <h1 className="text-lg font-bold mb-2 text-white">
+                    {children}
+                  </h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="text-base font-bold mb-2 text-white">
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-sm font-bold mb-1 text-white">
+                    {children}
+                  </h3>
+                ),
+                p: ({ children }) => (
+                  <p className="mb-2 text-white">{children}</p>
+                ),
+                ul: ({ children }) => (
+                  <ul className="list-disc list-inside mb-2 text-white">
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal list-inside mb-2 text-white">
+                    {children}
+                  </ol>
+                ),
+                li: ({ children }) => (
+                  <li className="text-white">{children}</li>
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-bold text-white">{children}</strong>
+                ),
+                em: ({ children }) => (
+                  <em className="italic text-white">{children}</em>
+                ),
+                code: ({ children }) => (
+                  <code className="bg-gray-800 px-1 py-0.5 rounded text-xs font-mono text-green-400">
+                    {children}
+                  </code>
+                ),
+                pre: ({ children }) => (
+                  <pre className="bg-gray-800 p-2 rounded text-xs font-mono text-green-400 overflow-x-auto mb-2">
+                    {children}
+                  </pre>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-4 border-blue-500 pl-2 italic text-gray-300 mb-2">
+                    {children}
+                  </blockquote>
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          )}
         </div>
 
         {/* Attachments */}

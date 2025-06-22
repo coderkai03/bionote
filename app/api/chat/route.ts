@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     const processedMessages = processMessagesWithImages(messages, data);
 
     console.log("Calling Google Gemini 2.5 Flash API...");
-    const result = await streamText({
+    const result = streamText({
       model: google("gemini-2.5-flash-preview-04-17", {
         useSearchGrounding: true,
       }),
