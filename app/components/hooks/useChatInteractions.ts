@@ -130,7 +130,7 @@ export function useChatInteractions() {
       if (result.imageUrl) {
         let assistantContent = `Here's the generated image based on your prompt: "${result.prompt}"`;
         if (result.demoMode) {
-          assistantContent = `🛠️ **Demo Mode**: ${result.message}\n\nGenerated image based on your prompt: "${result.prompt}"`;
+          assistantContent = `🛠️ **Annotation Edit Mode**: ${result.message}\nEdited image based on your prompt: "${result.prompt}"`;
         } else if (result.analysis) {
           assistantContent = `I analyzed your image and generated a new one based on your request: "${result.prompt}"\n\nImage Analysis: ${result.analysis}`;
         }
