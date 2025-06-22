@@ -71,4 +71,4 @@ export async function POST(req: Request) {
     console.error('Full error object:', error);
     return new Response(`Internal Server Error: ${error instanceof Error ? error.message : String(error)}`, { status: 500 });
   }
-} 
+}

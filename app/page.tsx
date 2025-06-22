@@ -7,38 +7,47 @@ export default function Home() {
   return (
     <div className="flex h-screen">
       {/* Left Panel - 3D Model with Drawing Overlay */}
-      <div className="flex-1 h-full relative">
-        <DrawingOverlay onScreenshotCapture={(base64, blob) => {
-          // This will be handled by the chat panel via custom events
-          console.log('Screenshot captured:', { base64: base64.substring(0, 50) + '...', blob });
-        }} />
-        
-        {/* Attribution overlay - positioned absolutely */}
-        <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 shadow-lg z-30">
-          <p style={{fontSize: '13px', fontWeight: 'normal', margin: '0', color: '#4A4A4A'}}>
-            <a 
-              href="https://sketchfab.com/3d-models/3d-animated-realistic-human-heart-v10-a70c0c47fe4b4bbfabfc8f445365d5a4?utm_medium=embed&utm_campaign=share-popup&utm_content=a70c0c47fe4b4bbfabfc8f445365d5a4" 
-              target="_blank" 
-              rel="nofollow" 
-              style={{fontWeight: 'bold', color: '#1CAAD9'}}
+      <div className="flex-1 h-full">
+        <div className="h-full">
+          <DrawingOverlay onScreenshotCapture={() => {}} />
+          {/* Attribution overlay - positioned absolutely */}
+          <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 shadow-lg z-40">
+            <p
+              style={{
+                fontSize: "13px",
+                fontWeight: "normal",
+                margin: "0",
+                color: "#4A4A4A",
+              }}
             >
-              3d Animated Realistic Human Heart V1.0
-            </a> by <a 
-              href="https://sketchfab.com/docjana?utm_medium=embed&utm_campaign=share-popup&utm_content=a70c0c47fe4b4bbfabfc8f445365d5a4" 
-              target="_blank" 
-              rel="nofollow" 
-              style={{fontWeight: 'bold', color: '#1CAAD9'}}
-            >
-              Anatomy by Doctor Jana
-            </a> on <a 
-              href="https://sketchfab.com?utm_medium=embed&utm_campaign=share-popup&utm_content=a70c0c47fe4b4bbfabfc8f445365d5a4" 
-              target="_blank" 
-              rel="nofollow" 
-              style={{fontWeight: 'bold', color: '#1CAAD9'}}
-            >
-              Sketchfab
-            </a>
-          </p>
+              <a
+                href="https://sketchfab.com/3d-models/3d-animated-realistic-human-heart-v10-a70c0c47fe4b4bbfabfc8f445365d5a4?utm_medium=embed&utm_campaign=share-popup&utm_content=a70c0c47fe4b4bbfabfc8f445365d5a4"
+                target="_blank"
+                rel="nofollow"
+                style={{ fontWeight: "bold", color: "#1CAAD9" }}
+              >
+                3d Animated Realistic Human Heart V1.0
+              </a>{" "}
+              by{" "}
+              <a
+                href="https://sketchfab.com/docjana?utm_medium=embed&utm_campaign=share-popup&utm_content=a70c0c47fe4b4bbfabfc8f445365d5a4"
+                target="_blank"
+                rel="nofollow"
+                style={{ fontWeight: "bold", color: "#1CAAD9" }}
+              >
+                Anatomy by Doctor Jana
+              </a>{" "}
+              on{" "}
+              <a
+                href="https://sketchfab.com?utm_medium=embed&utm_campaign=share-popup&utm_content=a70c0c47fe4b4bbfabfc8f445365d5a4"
+                target="_blank"
+                rel="nofollow"
+                style={{ fontWeight: "bold", color: "#1CAAD9" }}
+              >
+                Sketchfab
+              </a>
+            </p>
+          </div>
         </div>
       </div>
 
