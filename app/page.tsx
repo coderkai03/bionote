@@ -1,60 +1,27 @@
-'use client';
-
-import ChatPanel from "./components/ChatPanel";
-import DrawingOverlay from "./components/DrawingOverlay";
-
 export default function Home() {
   return (
-    <div className="flex h-screen">
-      {/* Left Panel - 3D Model with Drawing Overlay */}
-      <div className="flex-1 h-full">
-        <div className="h-full">
-          <DrawingOverlay onScreenshotCapture={() => {}} />
-          {/* Attribution overlay - positioned absolutely */}
-          <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 shadow-lg z-40">
-            <p
-              style={{
-                fontSize: "13px",
-                fontWeight: "normal",
-                margin: "0",
-                color: "#4A4A4A",
-              }}
-            >
-              <a
-                href="https://sketchfab.com/3d-models/3d-animated-realistic-human-heart-v10-a70c0c47fe4b4bbfabfc8f445365d5a4?utm_medium=embed&utm_campaign=share-popup&utm_content=a70c0c47fe4b4bbfabfc8f445365d5a4"
-                target="_blank"
-                rel="nofollow"
-                style={{ fontWeight: "bold", color: "#1CAAD9" }}
-              >
-                3d Animated Realistic Human Heart V1.0
-              </a>{" "}
-              by{" "}
-              <a
-                href="https://sketchfab.com/docjana?utm_medium=embed&utm_campaign=share-popup&utm_content=a70c0c47fe4b4bbfabfc8f445365d5a4"
-                target="_blank"
-                rel="nofollow"
-                style={{ fontWeight: "bold", color: "#1CAAD9" }}
-              >
-                Anatomy by Doctor Jana
-              </a>{" "}
-              on{" "}
-              <a
-                href="https://sketchfab.com?utm_medium=embed&utm_campaign=share-popup&utm_content=a70c0c47fe4b4bbfabfc8f445365d5a4"
-                target="_blank"
-                rel="nofollow"
-                style={{ fontWeight: "bold", color: "#1CAAD9" }}
-              >
-                Sketchfab
-              </a>
-            </p>
-          </div>
-        </div>
+    <main className="min-h-screen bg-gray-100 text-gray-800 flex flex-col items-center justify-center px-4">
+      <div className="mb-8 -mt-20">
+        <span className="text-sm text-green-600 bg-white/80 px-3 py-1 rounded-full shadow-sm">
+          The NAME TBD API is now in Beta.{" "}
+          <a href="#" className="underline ml-1">
+            Learn More →
+          </a>
+        </span>
       </div>
 
-      {/* Right Panel - Chat */}
-      <div className="w-96 h-screen">
-        <ChatPanel />
+      <div className="text-center">
+        <h1 className="text-6xl font-bold text-black mb-4">
+          What can I help you visualize?
+        </h1>
       </div>
-    </div>
+      <div className="w-full max-w-2xl">
+        <input
+          type="text"
+          placeholder="Describe what you'd like to visualize..."
+          className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+    </main>
   );
 }
