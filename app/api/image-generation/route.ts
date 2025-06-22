@@ -1,28 +1,141 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// !!! NOTE, WE ARE USING JUST FOR THE DEMO RIGHT NOW SINCE WE CANNOT VERIFY OUR ORGANIZATION FOR THE IMAGE GENERATION API :(
+
+export const runtime = "edge";
+export const maxDuration = 60;
+export const revalidate = 0; // Disable caching for this route
+export const dynamic = "force-dynamic"; // Force dynamic rendering
+interface CoreMessage {
+  id?: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+}
+
+interface ImageGenerationRequest {
+  messages: CoreMessage[];
+  data?: {
+    imageUrl?: string;
+  };
+}
 
 export async function POST(req: NextRequest) {
-  const formData = await req.formData();
-  const image = formData.get("image") as File;
-  const caption = formData.get("caption") as string;
+  await new Promise((resolve) => setTimeout(resolve, 21000));
+  console.log("--- IMAGE GENERATION API REQUEST RECEIVED ---");
+  try {
+    const body: ImageGenerationRequest = await req.json();
+    const { messages, data } = body;
 
-  // image is a base64 string
-  const response = await openai.images.edit({
-    model: "gpt-image-1",
-    image: image,
-    prompt: caption,
-  });
-  const image_base64 = response.data?.[0]?.b64_json;
-  if (!image_base64) {
+    console.log(`Received ${messages.length} messages for image generation.`);
+    console.log("Request data:", data);
+
+    // Get the last user message (should start with /image)
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage || lastMessage.role !== "user") {
+      return NextResponse.json(
+        { error: "No user message found" },
+        { status: 400 }
+      );
+    }
+
+    // Extract prompt from the message (remove /image prefix)
+    const prompt = lastMessage.content.replace(/^\/image\s*/, "").trim();
+    if (!prompt) {
+      return NextResponse.json(
+        { error: "No prompt provided after /image command" },
+        { status: 400 }
+      );
+    }
+
+    console.log("Image generation prompt:", prompt);
+    console.log("Has image attachment:", !!data?.imageUrl);
+
+    if (data?.imageUrl) {
+      // If there's an image attachment, use demo image editing
+      console.log("Using demo image editing with attachment");
+
+      // For demo purposes, we'll fetch the public image and convert it to base64
+      const imageUrl = `${req.nextUrl.origin}/image.png`;
+
+      try {
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+          throw new Error(
+            `Failed to fetch demo image: ${imageResponse.status}`
+          );
+        }
+
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64String = Buffer.from(imageBuffer).toString("base64");
+
+        console.log("Demo image loaded successfully");
+
+        // Return the image as base64 data URL
+        const imageDataUrl = `data:image/png;base64,${base64String}`;
+        // Simulate processing delay
+        return NextResponse.json({
+          imageUrl: imageDataUrl,
+          prompt: prompt,
+          demoMode: true,
+          message: "These are the labelled parts of the image.",
+        });
+      } catch (fetchError) {
+        console.error("Failed to fetch demo image:", fetchError);
+        return NextResponse.json(
+          { error: "Failed to load demo image" },
+          { status: 500 }
+        );
+      }
+    } else {
+      // If no image attachment, also return demo image for now
+      console.log("Using demo image generation without attachment");
+
+      const imageUrl = `${req.nextUrl.origin}/image.png`;
+
+      try {
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+          throw new Error(
+            `Failed to fetch demo image: ${imageResponse.status}`
+          );
+        }
+
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64String = Buffer.from(imageBuffer).toString("base64");
+
+        console.log("Demo image generated successfully");
+
+        // Return the image as base64 data URL
+        const imageDataUrl = `data:image/png;base64,${base64String}`;
+
+        return NextResponse.json({
+          imageUrl: imageDataUrl,
+          prompt: prompt,
+          demoMode: true,
+          message: "Demo mode: Using sample image from /public/image.png",
+        });
+      } catch (fetchError) {
+        console.error("Failed to fetch demo image:", fetchError);
+        return NextResponse.json(
+          { error: "Failed to load demo image" },
+          { status: 500 }
+        );
+      }
+    }
+  } catch (error: unknown) {
+    console.error("--- IMAGE GENERATION API ERROR ---");
+    console.error("Error:", error);
+
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: `Image operation failed: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Failed to generate image" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
-  const image_bytes = Buffer.from(image_base64, "base64");
-  return NextResponse.json({ image_bytes });
 }
