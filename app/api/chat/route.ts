@@ -1,74 +1,120 @@
-import { google } from '@ai-sdk/google';
-import { Message, streamText, CoreMessage } from 'ai';
+import { google } from "@ai-sdk/google";
+import { streamText, CoreMessage } from "ai";
 
-export const runtime = 'edge';
+export const runtime = "edge";
+export const maxDuration = 60;
+
+interface ChatRequest {
+  messages: CoreMessage[];
+  data?: {
+    imageUrl?: string;
+  };
+}
+
+interface ImageContent {
+  type: "image";
+  image: string | URL;
+}
+
+interface TextContent {
+  type: "text";
+  text: string;
+}
+
+type MessageContent =
+  | TextContent
+  | ImageContent
+  | (TextContent | ImageContent)[];
 
 export async function POST(req: Request) {
-  console.log('=== CHAT API ROUTE STARTED ===');
-  
-  try {
-    console.log('Parsing request body...');
-    const { messages }: { messages: Message[] } = await req.json();
-    console.log('Received messages:', JSON.stringify(messages, null, 2));
+  console.log("--- CHAT API (V3) REQUEST RECEIVED ---");
 
-    console.log('Checking environment variables...');
-    console.log('GOOGLE_GENERATIVE_AI_API_KEY exists:', !!process.env.GOOGLE_GENERATIVE_AI_API_KEY);
-    
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      console.error('Google API key not configured');
-      return new Response('Google API key not configured', { status: 500 });
+  try {
+    const { messages, data }: ChatRequest = await req.json();
+
+    console.log(`Received ${messages.length} messages.`);
+    console.log("Request data:", data);
+    if (data?.imageUrl) {
+      console.log(
+        `Image URL received, length: ${data.imageUrl.length} characters`
+      );
+      console.log(
+        `Image type: ${data.imageUrl.startsWith("data:") ? "base64" : "URL"}`
+      );
     }
 
-    console.log('Processing messages for vision model...');
-    const processedMessages = messages.map((message, index) => {
-      console.log(`Processing message ${index}:`, {
-        role: message.role,
-        hasData: !!message.data,
-        dataType: typeof message.data,
-        contentLength: message.content?.length || 0
-      });
-      
-      if (message.role === 'user' && message.data && typeof message.data === 'object') {
-        const data = message.data as { imageUrl?: string };
-        console.log('Found image data:', {
-          hasImageUrl: !!data.imageUrl,
-          imageUrlLength: data.imageUrl?.length || 0,
-          imageUrlPrefix: data.imageUrl?.substring(0, 50) + '...'
-        });
-        
-        if (data.imageUrl) {
-          console.log('Creating vision message with image...');
-          return {
-            role: 'user',
-            content: [
-              { type: 'text', text: message.content },
-              { type: 'image', image: new URL(data.imageUrl) }
-            ]
-          };
-        }
-      }
-      
-      console.log('Returning standard message');
-      return { role: message.role, content: message.content };
-    });
+    // Validate API key
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      console.error("Google API key not configured");
+      return new Response("Google API key not configured", { status: 500 });
+    }
 
-    console.log('Final processed messages:', JSON.stringify(processedMessages, null, 2));
+    // Process messages with image support
+    const processedMessages = processMessagesWithImages(messages, data);
 
-    console.log('Calling Google Gemini API...');
+    console.log("Calling Google Gemini 2.5 Flash API...");
     const result = await streamText({
-      model: google('models/gemini-1.5-flash-latest'),
-      messages: processedMessages as CoreMessage[],
+      model: google("gemini-2.5-flash-preview-04-17", {
+        useSearchGrounding: true,
+      }),
+      messages: processedMessages,
     });
 
-    console.log('API call successful, returning stream response');
+    console.log("API call successful, returning stream response.");
     return result.toDataStreamResponse();
-    
   } catch (error: unknown) {
-    console.error('=== CHAT API ERROR ===');
-    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
-    console.error('Error message:', error instanceof Error ? error.message : String(error));
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    console.error('Full error object:', error);
-    return new Response(`Internal Server Error: ${error instanceof Error ? error.message : String(error)}`, { status: 500 });
+    console.error("--- CHAT API ERROR ---");
+    return handleApiError(error);
   }
+}
+
+function processMessagesWithImages(
+  messages: CoreMessage[],
+  data?: { imageUrl?: string }
+): CoreMessage[] {
+  if (!data?.imageUrl) {
+    return messages;
+  }
+
+  const processedMessages = [...messages];
+  const lastUserMessage = processedMessages[processedMessages.length - 1];
+
+  // Only process if the last message is from the user
+  if (lastUserMessage?.role === "user") {
+    const textContent =
+      typeof lastUserMessage.content === "string"
+        ? lastUserMessage.content
+        : "";
+
+    // Create multimodal content array
+    const multiModalContent: MessageContent = [
+      {
+        type: "text",
+        text: textContent,
+      },
+      {
+        type: "image",
+        image: data.imageUrl.startsWith("data:")
+          ? data.imageUrl
+          : new URL(data.imageUrl),
+      },
+    ];
+
+    lastUserMessage.content = multiModalContent;
+  }
+
+  return processedMessages;
+}
+
+function handleApiError(error: unknown): Response {
+  if (error instanceof Error) {
+    console.error("Error:", error.message);
+    console.error("Stack:", error.stack);
+    return new Response(`Internal Server Error: ${error.message}`, {
+      status: 500,
+    });
+  }
+
+  console.error("Unknown error:", error);
+  return new Response("Internal Server Error", { status: 500 });
 }
