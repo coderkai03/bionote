@@ -41,11 +41,12 @@ export default function ChatPanel() {
         handleScreenshotCaptured as EventListener
       );
     };
-  }, []);  const handleFormSubmit = async (event: React.FormEvent) => {
+  }, []);
+  const handleFormSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    
+
     // Check if this is an image generation request
-    if (input.trim().startsWith('/image')) {
+    if (input.trim().startsWith("/image")) {
       await handleImageGeneration();
       return;
     }
@@ -107,71 +108,89 @@ export default function ChatPanel() {
       };
 
       // Include image data if available (screenshot or file)
-      const imageData = screenshotFile || (files && files[0] ? await fileToBase64(files[0]) : null);
+      const imageData =
+        screenshotFile ||
+        (files && files[0] ? await fileToBase64(files[0]) : null);
       if (imageData) {
         requestData.data = { imageUrl: imageData };
       }
 
       // Call the image generation API
-      const response = await fetch('/api/image-generation', {
-        method: 'POST',
+      const response = await fetch("/api/image-generation", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate image');
+        throw new Error(errorData.error || "Failed to generate image");
       }
 
       const result = await response.json();
-        if (result.imageUrl) {
+      if (result.imageUrl) {
         // Add both user message and assistant response with the generated image
         const userMessage = {
           id: Date.now().toString(),
           role: "user" as const,
           content: input,
-          experimental_attachments: imageData ? [{
-            name: "input.png",
-            contentType: "image/png",
-            url: imageData,
-          }] : undefined,
-        };const assistantMessage = {
+          experimental_attachments: imageData
+            ? [
+                {
+                  name: "input.png",
+                  contentType: "image/png",
+                  url: imageData,
+                },
+              ]
+            : undefined,
+        };
+        const assistantMessage = {
           id: (Date.now() + 1).toString(),
           role: "assistant" as const,
-          content: result.analysis 
+          content: result.demoMode
+            ? `🛠️ **Demo Mode**: ${result.message}\n\nGenerated image based on your prompt: "${result.prompt}"`
+            : result.analysis
             ? `I analyzed your image and generated a new one based on your request: "${result.prompt}"\n\nImage Analysis: ${result.analysis}`
             : `Here's the generated image based on your prompt: "${result.prompt}"`,
-          experimental_attachments: [{
-            name: "generated_image.png",
-            contentType: "image/png",
-            url: result.imageUrl,
-          }],
+          experimental_attachments: [
+            {
+              name: result.demoMode ? "demo_image.png" : "generated_image.png",
+              contentType: "image/png",
+              url: result.imageUrl,
+            },
+          ],
         };
 
         // Update the messages using setMessages
         setMessages([...messages, userMessage, assistantMessage]);
       }
-
     } catch (error) {
-      console.error('Image generation error:', error);
+      console.error("Image generation error:", error);
       // Add an error message to the chat
       const errorMessage = {
         id: Date.now().toString(),
         role: "assistant" as const,
-        content: `Sorry, I couldn't generate the image. Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        content: `Sorry, I couldn't generate the image. Error: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
       };
-      setMessages([...messages, {
-        id: (Date.now() - 1).toString(),
-        role: "user" as const,
-        content: input,
-      }, errorMessage]);
+      setMessages([
+        ...messages,
+        {
+          id: (Date.now() - 1).toString(),
+          role: "user" as const,
+          content: input,
+        },
+        errorMessage,
+      ]);
     } finally {
       setIsGeneratingImage(false);
       // Clear the input and attachments
-      handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLInputElement>);
+      handleInputChange({
+        target: { value: "" },
+      } as React.ChangeEvent<HTMLInputElement>);
       setFiles(undefined);
       setScreenshotFile(null);
       if (fileInputRef.current) {
@@ -185,13 +204,18 @@ export default function ChatPanel() {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
+      reader.onerror = (error) => reject(error);
     });
-  };  const getStatusDisplay = () => {
+  };
+  const getStatusDisplay = () => {
     if (isGeneratingImage) {
       // Check if there's an image attachment to determine the type of operation
-      const hasImageAttachment = screenshotFile || (files && files[0] && files[0].type.startsWith('image/'));
-      return hasImageAttachment ? "Editing image with AI..." : "Generating image...";
+      const hasImageAttachment =
+        screenshotFile ||
+        (files && files[0] && files[0].type.startsWith("image/"));
+      return hasImageAttachment
+        ? "Editing image with AI..."
+        : "Generating image...";
     }
     switch (status) {
       case "submitted":
@@ -207,7 +231,8 @@ export default function ChatPanel() {
     }
   };
 
-  const isLoading = status === "submitted" || status === "streaming" || isGeneratingImage;
+  const isLoading =
+    status === "submitted" || status === "streaming" || isGeneratingImage;
   const hasError = status === "error" || error;
 
   return (
@@ -254,7 +279,8 @@ export default function ChatPanel() {
                 Retry
               </button>
             </div>
-          )}          {messages.length === 0 && !error ? (
+          )}{" "}
+          {messages.length === 0 && !error ? (
             <div className="text-center text-gray-400 mt-4 sm:mt-8 px-4">
               <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-gradient-to-br from-white/10 to-white/5 shadow-lg flex items-center justify-center">
                 <span className="text-xl sm:text-2xl">💬</span>
@@ -268,8 +294,20 @@ export default function ChatPanel() {
               <div className="text-xs text-gray-500 bg-gray-800/30 rounded-lg p-3 backdrop-blur-sm border border-gray-700/50">
                 <p className="mb-2 font-medium text-gray-300">💡 Pro Tips:</p>
                 <ul className="space-y-1 text-left">
-                  <li>• Type <code className="bg-gray-700/50 px-1 rounded text-blue-400">/image</code> followed by a description to generate images</li>
-                  <li>• Upload images with your <code className="bg-gray-700/50 px-1 rounded text-blue-400">/image</code> command for AI-powered editing</li>
+                  <li>
+                    • Type{" "}
+                    <code className="bg-gray-700/50 px-1 rounded text-blue-400">
+                      /image
+                    </code>{" "}
+                    followed by a description to generate images
+                  </li>
+                  <li>
+                    • Upload images with your{" "}
+                    <code className="bg-gray-700/50 px-1 rounded text-blue-400">
+                      /image
+                    </code>{" "}
+                    command for AI-powered editing
+                  </li>
                   <li>• Take screenshots and attach them to your messages</li>
                 </ul>
               </div>
@@ -315,7 +353,8 @@ export default function ChatPanel() {
                           .filter((attachment) =>
                             attachment.contentType?.startsWith("image/")
                           )
-                          .map((attachment, index) => (                            <div
+                          .map((attachment, index) => (
+                            <div
                               key={`${message.id}-${index}`}
                               className="relative group cursor-pointer hover:scale-105 transition-transform duration-200"
                               onClick={() => setModalImage(attachment.url)}
@@ -368,7 +407,8 @@ export default function ChatPanel() {
                 </div>
               </div>
             ))
-          )}          {/* Loading indicator */}
+          )}{" "}
+          {/* Loading indicator */}
           {isLoading && (
             <div className="flex justify-start">
               <div className="max-w-[85%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-white bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg">
@@ -383,13 +423,16 @@ export default function ChatPanel() {
                       className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-bounce"
                       style={{ animationDelay: "0.2s" }}
                     ></div>
-                  </div>                  <span className="text-xs sm:text-sm drop-shadow-sm">
-                    {isGeneratingImage 
-                      ? (screenshotFile || (files && files[0] && files[0].type.startsWith('image/')) 
-                          ? "Editing image with AI..." 
-                          : "Generating image...")
-                      : "AI is typing..."
-                    }
+                  </div>{" "}
+                  <span className="text-xs sm:text-sm drop-shadow-sm">
+                    {isGeneratingImage
+                      ? screenshotFile ||
+                        (files &&
+                          files[0] &&
+                          files[0].type.startsWith("image/"))
+                        ? "Editing image with AI..."
+                        : "Generating image..."
+                      : "AI is typing..."}
                   </span>
                 </div>
               </div>
@@ -456,22 +499,20 @@ export default function ChatPanel() {
               id="file-upload"
               accept="image/*,text/*,.pdf,.doc,.docx"
             />
-
             {/* File upload button */}
             <label htmlFor="file-upload">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg cursor-pointer transition-colors flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-lg hover:from-white/15 hover:to-white/10 flex-shrink-0">
                 <span className="text-sm sm:text-lg">📎</span>
               </div>
             </label>
-
-            {/* Text input */}            <input
+            {/* Text input */}{" "}
+            <input
               value={input}
               onChange={handleInputChange}
               placeholder="Type your message... (use /image for image generation)"
               className="flex-1 px-3 py-2 sm:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400 bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-lg text-sm sm:text-base min-w-0"
               disabled={isLoading || !!error}
             />
-
             {/* Send button */}
             <button
               type="submit"

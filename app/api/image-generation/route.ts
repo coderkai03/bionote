@@ -1,9 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export const runtime = "edge";
 export const maxDuration = 60;
@@ -31,15 +26,6 @@ export async function POST(req: NextRequest) {
     console.log(`Received ${messages.length} messages for image generation.`);
     console.log("Request data:", data);
 
-    // Validate API key
-    if (!process.env.OPENAI_API_KEY) {
-      console.error("OpenAI API key not configured");
-      return NextResponse.json(
-        { error: "OpenAI API key not configured" },
-        { status: 500 }
-      );
-    }
-
     // Get the last user message (should start with /image)
     const lastMessage = messages[messages.length - 1];
     if (!lastMessage || lastMessage.role !== "user") {
@@ -62,45 +48,78 @@ export async function POST(req: NextRequest) {
     console.log("Has image attachment:", !!data?.imageUrl);
 
     if (data?.imageUrl) {
-      // If there's an image attachment, use image editing
-      console.log("Using image editing with attachment");
+      // If there's an image attachment, use demo image editing
+      console.log("Using demo image editing with attachment");
 
-      // Convert base64 to buffer for OpenAI
-      const base64Data = data.imageUrl.replace(
-        /^data:image\/[a-z]+;base64,/,
-        ""
-      );
-      const imageBuffer = Buffer.from(base64Data, "base64");
+      // For demo purposes, we'll fetch the public image and convert it to base64
+      const imageUrl = `${req.nextUrl.origin}/image.png`;
 
-      // Create a File-like object from the buffer
-      const imageFile = new File([imageBuffer], "input.png", {
-        type: "image/png",
-      });
+      try {
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+          throw new Error(
+            `Failed to fetch demo image: ${imageResponse.status}`
+          );
+        }
 
-      const response = await openai.images.edit({
-        model: "gpt-image-1",
-        image: imageFile,
-        prompt: prompt,
-        size: "1024x1024",
-      });
-      const image_base64 = response.data?.[0]?.b64_json;
-      if (!image_base64) {
-        console.error("No image data received from OpenAI");
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64String = Buffer.from(imageBuffer).toString("base64");
+
+        console.log("Demo image loaded successfully");
+
+        // Return the image as base64 data URL
+        const imageDataUrl = `data:image/png;base64,${base64String}`;
+        setTimeout(() => {
+          console.log("Demo image processing complete");
+        }, 15000); // Simulate processing delay
+        return NextResponse.json({
+          imageUrl: imageDataUrl,
+          prompt: prompt,
+          demoMode: true,
+          message: "These are the labelled parts of the image.",
+        });
+      } catch (fetchError) {
+        console.error("Failed to fetch demo image:", fetchError);
         return NextResponse.json(
-          { error: "Failed to edit image" },
+          { error: "Failed to load demo image" },
           { status: 500 }
         );
       }
+    } else {
+      // If no image attachment, also return demo image for now
+      console.log("Using demo image generation without attachment");
 
-      console.log("Image edited successfully");
+      const imageUrl = `${req.nextUrl.origin}/image.png`;
 
-      // Return the image as base64 data URL
-      const imageDataUrl = `data:image/png;base64,${image_base64}`;
+      try {
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+          throw new Error(
+            `Failed to fetch demo image: ${imageResponse.status}`
+          );
+        }
 
-      return NextResponse.json({
-        imageUrl: imageDataUrl,
-        prompt: prompt,
-      });
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64String = Buffer.from(imageBuffer).toString("base64");
+
+        console.log("Demo image generated successfully");
+
+        // Return the image as base64 data URL
+        const imageDataUrl = `data:image/png;base64,${base64String}`;
+
+        return NextResponse.json({
+          imageUrl: imageDataUrl,
+          prompt: prompt,
+          demoMode: true,
+          message: "Demo mode: Using sample image from /public/image.png",
+        });
+      } catch (fetchError) {
+        console.error("Failed to fetch demo image:", fetchError);
+        return NextResponse.json(
+          { error: "Failed to load demo image" },
+          { status: 500 }
+        );
+      }
     }
   } catch (error: unknown) {
     console.error("--- IMAGE GENERATION API ERROR ---");
