@@ -324,6 +324,13 @@ export default function Home() {
       // Get the position and size of the model container
       const containerRect = modelContainer.getBoundingClientRect();
 
+      // Get device pixel ratio for high-DPI displays
+      const dpr = window.devicePixelRatio || 1;
+
+      // Get actual viewport dimensions (not screen dimensions)
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
       // Create a canvas for cropping
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
@@ -332,25 +339,47 @@ export default function Home() {
         throw new Error("Could not get canvas context");
       }
 
-      // Set canvas size to match the model container
-      canvas.width = containerRect.width;
-      canvas.height = containerRect.height;
+      // Set canvas size to match the model container with DPR scaling
+      canvas.width = containerRect.width * dpr;
+      canvas.height = containerRect.height * dpr;
 
-      // Draw the cropped portion of the video onto the canvas
-      // We need to calculate the scale factor between video and screen
+      // Scale the canvas context to account for DPR
+      ctx.scale(dpr, dpr);
+
+      // Get actual video dimensions
       const videoWidth = video.videoWidth;
       const videoHeight = video.videoHeight;
-      const screenWidth = window.screen.width;
-      const screenHeight = window.screen.height;
 
-      const scaleX = videoWidth / screenWidth;
-      const scaleY = videoHeight / screenHeight;
+      // Calculate scale factors based on viewport dimensions (not screen)
+      // Account for the fact that the video might be capturing at different resolution
+      const scaleX = videoWidth / viewportWidth;
+      const scaleY = videoHeight / viewportHeight;
 
       // Calculate the source rectangle in video coordinates
-      const sourceX = containerRect.left * scaleX;
-      const sourceY = containerRect.top * scaleY;
+      // Add window scroll offset to account for page scrolling
+      const scrollX = window.scrollX || window.pageXOffset || 0;
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+
+      const sourceX = (containerRect.left + scrollX) * scaleX;
+      const sourceY = (containerRect.top + scrollY) * scaleY;
       const sourceWidth = containerRect.width * scaleX;
       const sourceHeight = containerRect.height * scaleY;
+
+      console.log("Capture debug info:", {
+        containerRect,
+        videoWidth,
+        videoHeight,
+        viewportWidth,
+        viewportHeight,
+        scaleX,
+        scaleY,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        dpr,
+        scroll: { scrollX, scrollY },
+      });
 
       // Draw the cropped video content
       ctx.drawImage(
@@ -358,11 +387,11 @@ export default function Home() {
         sourceX,
         sourceY,
         sourceWidth,
-        sourceHeight, // Source rectangle
+        sourceHeight, // Source rectangle from video
         0,
         0,
-        canvas.width,
-        canvas.height // Destination rectangle
+        containerRect.width,
+        containerRect.height // Destination rectangle on canvas
       );
 
       const screenshot = canvas.toDataURL("image/png");
@@ -431,14 +460,14 @@ export default function Home() {
                 className="p-2 bg-white text-gray-700 rounded-lg shadow-lg hover:bg-gray-100 transition-all duration-200"
                 title="Clear Drawing"
               >
-                �️
+                🖌️
               </button>
               <button
                 onClick={captureCanvasDrawing}
                 className="p-2 bg-blue-500 text-white rounded-lg shadow-lg hover:bg-blue-600 transition-all duration-200"
                 title="Send Drawing to Chat"
               >
-                �
+                💬
               </button>
             </>
           )}
