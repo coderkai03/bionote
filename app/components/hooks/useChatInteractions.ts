@@ -10,6 +10,7 @@ export function useChatInteractions() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [noAudioDetected, setNoAudioDetected] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
@@ -18,12 +19,13 @@ export function useChatInteractions() {
   const {
     messages,
     input,
-    handleSubmit,
+    handleSubmit: originalHandleSubmit,
     handleInputChange,
     setInput,
     status,
     error,
     reload,
+    setMessages,
   } = useChat({
     api: "/api/chat",
   });
@@ -45,6 +47,135 @@ export function useChatInteractions() {
       );
     };
   }, [setScreenshotFile]);
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleImageGeneration = async () => {
+    setIsGeneratingImage(true);
+    try {
+      interface CoreMessage {
+        id?: string;
+        role: "user" | "assistant" | "system";
+        content: string;
+      }
+      const filteredMessages = messages.filter(
+        (m) =>
+          m.role === "user" || m.role === "assistant" || m.role === "system"
+      ) as CoreMessage[];
+
+      const currentMessages: CoreMessage[] = [
+        ...filteredMessages,
+        {
+          id: Date.now().toString(),
+          role: "user" as const,
+          content: input,
+        },
+      ];
+
+      interface ImageGenerationRequest {
+        messages: typeof currentMessages;
+        data?: {
+          imageUrl?: string;
+        };
+      }
+
+      const requestData: ImageGenerationRequest = {
+        messages: currentMessages,
+      };
+
+      const imageData =
+        screenshotFile ||
+        (files && files[0] ? await fileToBase64(files[0]) : null);
+      if (imageData) {
+        requestData.data = { imageUrl: imageData };
+      }
+
+      const userMessage = {
+        id: Date.now().toString(),
+        role: "user" as const,
+        content: input,
+        experimental_attachments: imageData
+          ? [
+              {
+                name: "input.png",
+                contentType: "image/png",
+                url: imageData,
+              },
+            ]
+          : undefined,
+      };
+      setMessages((messages) => [...messages, userMessage]);
+
+      const response = await fetch("/api/image-generation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate image");
+      }
+
+      const result = await response.json();
+      if (result.imageUrl) {
+        let assistantContent = `Here's the generated image based on your prompt: "${result.prompt}"`;
+        if (result.demoMode) {
+          assistantContent = `🛠️ **Demo Mode**: ${result.message}\n\nGenerated image based on your prompt: "${result.prompt}"`;
+        } else if (result.analysis) {
+          assistantContent = `I analyzed your image and generated a new one based on your request: "${result.prompt}"\n\nImage Analysis: ${result.analysis}`;
+        }
+        const assistantMessage = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant" as const,
+          content: assistantContent,
+          experimental_attachments: [
+            {
+              name: result.demoMode ? "demo_image.png" : "generated_image.png",
+              contentType: "image/png",
+              url: result.imageUrl,
+            },
+          ],
+        };
+        setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+      }
+    } catch (error) {
+      console.error("Image generation error:", error);
+      const errorMessage = {
+        id: Date.now().toString(),
+        role: "assistant" as const,
+        content: `Sorry, I couldn't generate the image. Error: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      };
+      setMessages([
+        ...messages,
+        {
+          id: (Date.now() - 1).toString(),
+          role: "user" as const,
+          content: input,
+        },
+        errorMessage,
+      ]);
+    } finally {
+      setIsGeneratingImage(false);
+      setInput("");
+      setFiles(undefined);
+      setScreenshotFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const handleAudioTranscription = async (audioFile: File) => {
     setIsTranscribing(true);
@@ -135,7 +266,12 @@ export function useChatInteractions() {
     }
   };
 
-  const handleFormSubmit = (event: FormEvent) => {
+  const handleFormSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (input.trim().startsWith("/image")) {
+      await handleImageGeneration();
+      return;
+    }
     if (screenshotFile && !files) {
       const screenshotAttachment = [
         {
@@ -144,14 +280,14 @@ export function useChatInteractions() {
           url: screenshotFile,
         },
       ];
-      handleSubmit(event, {
+      originalHandleSubmit(event, {
         experimental_attachments: screenshotAttachment,
         data: {
           imageUrl: screenshotFile,
         },
       });
     } else {
-      handleSubmit(event, {
+      originalHandleSubmit(event, {
         experimental_attachments: files,
       });
     }
@@ -163,6 +299,14 @@ export function useChatInteractions() {
   };
 
   const getStatusDisplay = () => {
+    if (isGeneratingImage) {
+      const hasImageAttachment =
+        screenshotFile ||
+        (files && files[0] && files[0].type.startsWith("image/"));
+      return hasImageAttachment
+        ? "Editing image with AI..."
+        : "Generating image...";
+    }
     switch (status) {
       case "submitted":
         return "Sending...";
@@ -177,7 +321,11 @@ export function useChatInteractions() {
     }
   };
 
-  const isLoading = status === "submitted" || status === "streaming";
+  const isLoading =
+    status === "submitted" ||
+    status === "streaming" ||
+    isGeneratingImage ||
+    isTranscribing;
   const hasError = status === "error" || error;
 
   return {
@@ -190,6 +338,7 @@ export function useChatInteractions() {
     isTranscribing,
     isRecording,
     noAudioDetected,
+    isGeneratingImage,
     handleMicButtonClick,
     fileInputRef,
     messages,
