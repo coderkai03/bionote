@@ -421,6 +421,23 @@ export default function Home() {
     <div className="flex h-screen bg-gray-900">
       {/* Left Panel - 3D Model Full Screen */}
       <div className="flex-1 h-full relative" ref={modelRef}>
+        {/* Drawing Canvas */}
+        <canvas
+          ref={canvasRef}
+          className={`absolute top-0 left-0 w-full h-full z-20 ${
+            isDrawingActive
+              ? "pointer-events-auto cursor-crosshair"
+              : "pointer-events-none"
+          }`}
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          style={{
+            touchAction: "none",
+            userSelect: "none",
+          }}
+        />
         <ModelContainer
           isDrawingActive={isDrawingActive}
           canvasRef={canvasRef as React.RefObject<HTMLCanvasElement>}
