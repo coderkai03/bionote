@@ -396,7 +396,7 @@ export default function Home() {
         0,
         0,
         containerRect.width,
-        containerRect.height, // Destination rectangle on canvas
+        containerRect.height // Destination rectangle on canvas
       );
 
       const screenshot = canvas.toDataURL("image/png");
@@ -407,18 +407,6 @@ export default function Home() {
       window.dispatchEvent(event);
     } catch (error) {
       console.error("Failed to capture model container:", error);
-    }
-  };
-
-  const captureCanvasDrawing = () => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const dataUrl = canvas.toDataURL("image/png");
-
-      const event = new CustomEvent("screenshot-captured", {
-        detail: { base64: dataUrl },
-      });
-      window.dispatchEvent(event);
     }
   };
 
@@ -440,91 +428,125 @@ export default function Home() {
         <div className="absolute top-4 left-4 z-30 flex gap-2">
           <button
             onClick={() => setIsDrawingActive(!isDrawingActive)}
-            className={`p-2 rounded-lg shadow-lg transition-all duration-200 ${
+            className={`p-2 rounded-lg shadow-lg transition-all duration-300 backdrop-blur-sm ${
               isDrawingActive
-                ? "bg-red-500 text-white hover:bg-red-600"
-                : "bg-white text-gray-700 hover:bg-gray-100"
-            }`}
+                ? "bg-[#3a3a3a] hover:bg-[#4a4a4a]"
+                : "bg-[#252525] hover:bg-[#303030]"
+            } relative overflow-hidden group`}
             title={isDrawingActive ? "Disable Drawing" : "Enable Drawing"}
           >
-            ✏️
+            <span className="relative z-10">✏️</span>
+            <div
+              className="absolute inset-0 opacity-30 group-hover:opacity-50 transition-opacity duration-300"
+              style={{
+                background:
+                  "linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)",
+                animation: "shimmer 2s infinite",
+              }}
+            />
           </button>
 
-          {/* Model Container Capture Button - Always Available */}
           <button
             onClick={captureModelContainer}
-            className="p-2 bg-green-500 text-white rounded-lg shadow-lg hover:bg-green-600 transition-all duration-200"
+            className="p-2 rounded-lg shadow-lg transition-all duration-300 bg-[#252525] hover:bg-[#303030] relative overflow-hidden group backdrop-blur-sm"
             title="Capture Model View"
           >
-            📸
+            <span className="relative z-10">📸</span>
+            <div
+              className="absolute inset-0 opacity-30 group-hover:opacity-50 transition-opacity duration-300"
+              style={{
+                background:
+                  "linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)",
+                animation: "shimmer 2s infinite",
+              }}
+            />
           </button>
 
           {isDrawingActive && (
-            <>
-              <button
-                onClick={clearDrawing}
-                className="p-2 bg-white text-gray-700 rounded-lg shadow-lg hover:bg-gray-100 transition-all duration-200"
-                title="Clear Drawing"
-              >
-                🖌️
-              </button>
-              <button
-                onClick={captureCanvasDrawing}
-                className="p-2 bg-blue-500 text-white rounded-lg shadow-lg hover:bg-blue-600 transition-all duration-200"
-                title="Send Drawing to Chat"
-              >
-                💬
-              </button>
-            </>
+            <button
+              onClick={clearDrawing}
+              className="p-2 rounded-lg shadow-lg transition-all duration-300 bg-[#252525] hover:bg-[#303030] relative overflow-hidden group backdrop-blur-sm"
+              title="Clear Drawing"
+            >
+              <span className="relative z-10">🗑️</span>
+              <div
+                className="absolute inset-0 opacity-30 group-hover:opacity-50 transition-opacity duration-300"
+                style={{
+                  background:
+                    "linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)",
+                  animation: "shimmer 2s infinite",
+                }}
+              />
+            </button>
           )}
-          {/* Screen capture control button */}
+
           {!mediaStream ? (
             <button
               onClick={startScreenCapture}
-              className="px-3 py-2 rounded-lg shadow-lg bg-green-500 text-white hover:bg-green-600 transition-all duration-200 text-xs font-semibold flex items-center gap-2"
+              className="px-3 py-2 rounded-lg shadow-lg transition-all duration-300 bg-[#252525] hover:bg-[#303030] text-gray-300 text-xs font-semibold flex items-center gap-2 relative overflow-hidden group backdrop-blur-sm"
               title="Start screen sharing"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-              Start Sharing
+              <span className="relative z-10 flex items-center gap-2">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+                Start Sharing
+              </span>
+              <div
+                className="absolute inset-0 opacity-30 group-hover:opacity-50 transition-opacity duration-300"
+                style={{
+                  background:
+                    "linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)",
+                  animation: "shimmer 2s infinite",
+                }}
+              />
             </button>
           ) : (
             <button
               onClick={stopScreenCapture}
-              className="px-3 py-2 rounded-lg shadow-lg bg-red-500 text-white hover:bg-red-600 transition-all duration-200 text-xs font-semibold flex items-center gap-2"
+              className="px-3 py-2 rounded-lg shadow-lg transition-all duration-300 bg-[#3a3a3a] hover:bg-[#4a4a4a] text-gray-300 text-xs font-semibold flex items-center gap-2 relative overflow-hidden group backdrop-blur-sm"
               title="Stop screen sharing"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 12v3a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11.586l-2-2H5a4 4 0 00-4 4v10a4 4 0 004 4h14a4 4 0 004-4v-3"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M18 9l4-4m0 4l-4-4"
-                />
-              </svg>
-              Stop Sharing
+              <span className="relative z-10 flex items-center gap-2">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 12v3a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11.586l-2-2H5a4 4 0 00-4 4v10a4 4 0 004 4h14a4 4 0 004-4v-3"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M18 9l4-4m0 4l-4-4"
+                  />
+                </svg>
+                Stop Sharing
+              </span>
+              <div
+                className="absolute inset-0 opacity-30 group-hover:opacity-50 transition-opacity duration-300"
+                style={{
+                  background:
+                    "linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)",
+                  animation: "shimmer 2s infinite",
+                }}
+              />
             </button>
           )}
         </div>
@@ -568,6 +590,14 @@ export default function Home() {
           }
           100% {
             transform: translateX(-100%) skewX(-15deg);
+          }
+        }
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%) skewX(-15deg);
+          }
+          100% {
+            transform: translateX(100%) skewX(-15deg);
           }
         }
       `}</style>
