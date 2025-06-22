@@ -4,9 +4,8 @@ import { useRef, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 
 // Constants for better maintainability
-const SKETCHFAB_MODEL_URL =
-  "https://sketchfab.com/models/a70c0c47fe4b4bbfabfc8f445365d5a4/embed";
-const SKETCHFAB_MODEL_TITLE = "3d Animated Realistic Human Heart V1.0";
+// const SKETCHFAB_MODEL_URL =
+//   "https://sketchfab.com/models/a70c0c47fe4b4bbfabfc8f445365d5a4/embed";
 
 // Animated Bar Component
 const AnimatedBar = ({ position }: { position: "top" | "bottom" }) => (
@@ -126,6 +125,7 @@ const ModelContainer = ({
   onMouseMove,
   onMouseUp,
   onMouseLeave,
+  modelUrl,
 }: {
   isDrawingActive: boolean;
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -133,14 +133,14 @@ const ModelContainer = ({
   onMouseMove: (event: React.MouseEvent) => void;
   onMouseUp: (event: React.MouseEvent) => void;
   onMouseLeave: (event: React.MouseEvent) => void;
+  modelUrl: string;
 }) => (
   <div className="relative h-full">
     <div className="sketchfab-embed-wrapper h-full">
       <iframe
-        title={SKETCHFAB_MODEL_TITLE}
         allowFullScreen
         allow="autoplay; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
-        src={SKETCHFAB_MODEL_URL}
+        src={modelUrl}
         className="w-full h-full"
         style={{
           pointerEvents: isDrawingActive ? "none" : "auto",
@@ -185,11 +185,9 @@ export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const modelRef = useRef<HTMLDivElement>(null);
   const params = useParams<{ id: string }>();
-  
+
   // Use the ID from the URL params if available, otherwise use the default URL
-  const modelUrl = params?.id 
-    ? `https://sketchfab.com/models/${params.id}/embed`
-    : SKETCHFAB_MODEL_URL;
+  const modelUrl = `https://sketchfab.com/models/${params.id}/embed`!;
 
   const startScreenCapture = async () => {
     try {
@@ -435,6 +433,7 @@ export default function Home() {
           onMouseMove={draw}
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
+          modelUrl={modelUrl}
         />
 
         {/* Drawing Controls */}
