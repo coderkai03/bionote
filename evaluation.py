@@ -121,7 +121,7 @@ def analyze_webpages(urls):
                 # Prepare the prompt for Gemini
                 prompt = (
                     "Look at the following screenshot of a webpage."
-                    "Does this page display a 3D model of a Mechanical engineering crane or related "
+                    "Does this page display a 3D model of a Mechanical engineering related to the user prompt which is the title"
                     "industrial machinery? Please answer with a simple 'Yes' or 'No'. If it says loading model skip the model please and just say no. "
                     "and provide a brief one-sentence explanation."
                 )
