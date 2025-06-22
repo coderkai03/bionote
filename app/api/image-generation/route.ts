@@ -18,7 +18,7 @@ interface ImageGenerationRequest {
 }
 
 export async function POST(req: NextRequest) {
-  await new Promise(resolve => setTimeout(resolve, 15000));
+  await new Promise(resolve => setTimeout(resolve, 25000));
   console.log("--- IMAGE GENERATION API REQUEST RECEIVED ---");
   try {
     const body: ImageGenerationRequest = await req.json();
