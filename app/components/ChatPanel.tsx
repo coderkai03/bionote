@@ -4,11 +4,12 @@ import { useChat } from 'ai/react';
 import { useState, useEffect, useRef } from 'react';
 
 export default function ChatPanel() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
+  const { messages, input, setInput, handleInputChange, isLoading, error, append } = useChat({
     api: '/api/chat',
   });
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -17,6 +18,45 @@ export default function ChatPanel() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  // Listen for screenshot events from DrawingOverlay
+  useEffect(() => {
+    const handleScreenshotCaptured = (event: CustomEvent) => {
+      const { base64 } = event.detail;
+      setScreenshotPreview(base64);
+    };
+
+    window.addEventListener('screenshot-captured', handleScreenshotCaptured as EventListener);
+    
+    return () => {
+      window.removeEventListener('screenshot-captured', handleScreenshotCaptured as EventListener);
+    };
+  }, []);
+
+  const removeScreenshot = () => {
+    setScreenshotPreview(null);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    // Don't submit if there's no input and no image
+    if (!input.trim() && !screenshotPreview) return;
+
+    // Use the `append` function to send a structured message
+    // with text and image data.
+    append({
+        role: 'user',
+        content: input,
+        data: {
+            imageUrl: screenshotPreview
+        }
+    });
+    
+    // Clear the input and the preview after submission
+    setInput('');
+    setScreenshotPreview(null);
+  };
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700">
@@ -46,7 +86,7 @@ export default function ChatPanel() {
                   Configuration Required
                 </h3>
                 <div className="mt-2 text-sm text-red-700 dark:text-red-300">
-                  <p>Please set up your Groq API key in the <code className="bg-red-100 dark:bg-red-900/50 px-1 py-0.5 rounded">.env.local</code> file. See <code className="bg-red-100 dark:bg-red-900/50 px-1 py-0.5 rounded">CHAT_SETUP.md</code> for instructions.</p>
+                  <p>Please set up your Google API key in the <code className="bg-red-100 dark:bg-red-900/50 px-1 py-0.5 rounded">.env.local</code> file. See <code className="bg-red-100 dark:bg-red-900/50 px-1 py-0.5 rounded">CHAT_SETUP.md</code> for instructions.</p>
                 </div>
               </div>
             </div>
@@ -61,7 +101,7 @@ export default function ChatPanel() {
               </svg>
             </div>
             <p className="text-lg font-medium">Start a conversation</p>
-            <p className="text-sm">Ask me anything and I'll help you out!</p>
+            <p className="text-sm">Ask me anything and I&apos;ll help you out!</p>
           </div>
         ) : (
           messages.map((message) => (
@@ -97,9 +137,34 @@ export default function ChatPanel() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Screenshot Preview */}
+      {screenshotPreview && (
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="relative inline-block">
+            <img 
+              src={screenshotPreview} 
+              alt="Screenshot preview" 
+              className="max-w-full h-20 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
+            />
+            <button
+              onClick={removeScreenshot}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+              title="Remove screenshot"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Screenshot will be included in your message
+          </p>
+        </div>
+      )}
+
       {/* Input Form */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <form onSubmit={handleSubmit} className="flex space-x-2">
+        <form onSubmit={handleFormSubmit} className="flex space-x-2">
           <input
             value={input}
             onChange={handleInputChange}
@@ -109,7 +174,7 @@ export default function ChatPanel() {
           />
           <button
             type="submit"
-            disabled={isLoading || !input.trim() || !!error}
+            disabled={isLoading || (!input.trim() && !screenshotPreview) || !!error}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
