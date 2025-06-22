@@ -22,6 +22,11 @@ async function searchMyModels(keywords: string) {
   }
 
   const data = await response.json();
+  if (!data.results || data.results.length === 0) {
+    console.warn("No results found for the given keywords.");
+    return [];
+  }
+  data.results = data.results.slice(0, 5);
 
   const parsed_data = data.results.map(
     (model: {
@@ -42,9 +47,9 @@ async function searchMyModels(keywords: string) {
 
 export async function POST(req: Request) {
   console.log("=== CHAT API ROUTE STARTED ===");
-
+  const data = await req.json();
   try {
-    const { user_prompt }: { user_prompt: string } = await req.json();
+    const { user_prompt }: { user_prompt: string } = data;
 
     console.log("Checking environment variables...");
 
@@ -54,7 +59,6 @@ export async function POST(req: Request) {
     }
 
     const prompt = `System Prompt: Assume that every user search prompt is a request to find a 3D model of a specific object or subject.
-
     You are an AI assistant that transforms user search prompts into optimized keyword phrases specifically for finding 3D models. For each prompt, first identify the main object or subject that the user wants a 3D model of. Only extract up to five keywords that directly and specifically describe the core object, avoiding broader categories, processes, or related systems unless they are essential to identifying the model. Always return the keywords as a list, with each keyword as a separate item, separated by commas. ${user_prompt}`;
 
     const result = await generateText({
