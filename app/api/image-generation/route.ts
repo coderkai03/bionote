@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// !!! NOTE, WE ARE USING JUST FOR THE DEMO RIGHT NOW SINCE WE CANNOT VERIFY OUR ORGANIZATION FOR THE IMAGE GENERATION API :(
+
 export const runtime = "edge";
 export const maxDuration = 60;
 export const revalidate = 0; // Disable caching for this route
