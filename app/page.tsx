@@ -1,5 +1,6 @@
 "use client";
 import ChatPanel from "./components/ChatPanel";
+import { useRef, useState, useEffect } from "react";
 
 // Constants for better maintainability
 const SKETCHFAB_MODEL_URL =
@@ -117,17 +118,53 @@ const AnimatedBar2 = ({ position }: { position: "top" | "bottom" }) => (
 );
 
 // 3D Model Container Component
-const ModelContainer = () => (
+const ModelContainer = ({
+  isDrawingActive,
+  canvasRef,
+  onMouseDown,
+  onMouseMove,
+  onMouseUp,
+  onMouseLeave,
+}: {
+  isDrawingActive: boolean;
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+  onMouseDown: (event: React.MouseEvent) => void;
+  onMouseMove: (event: React.MouseEvent) => void;
+  onMouseUp: (event: React.MouseEvent) => void;
+  onMouseLeave: (event: React.MouseEvent) => void;
+}) => (
   <div className="relative h-full">
     <div className="sketchfab-embed-wrapper h-full">
       <iframe
         title={SKETCHFAB_MODEL_TITLE}
         allowFullScreen
-        allow="autoplay; fullscreen; xr-spatial-tracking"
+        allow="autoplay; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
         src={SKETCHFAB_MODEL_URL}
         className="w-full h-full"
+        style={{
+          pointerEvents: isDrawingActive ? "none" : "auto",
+          userSelect: isDrawingActive ? "none" : "auto",
+        }}
       />
     </div>
+
+    {/* Drawing Canvas */}
+    <canvas
+      ref={canvasRef}
+      className={`absolute top-0 left-0 w-full h-full z-20 ${
+        isDrawingActive
+          ? "pointer-events-auto cursor-crosshair"
+          : "pointer-events-none"
+      }`}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseLeave}
+      style={{
+        touchAction: "none",
+        userSelect: "none",
+      }}
+    />
 
     {/* Animated bars */}
     <AnimatedBar position="top" />
@@ -140,11 +177,281 @@ const ModelContainer = () => (
 );
 
 export default function Home() {
+  const [isDrawingActive, setIsDrawingActive] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const modelRef = useRef<HTMLDivElement>(null);
+
+  const startScreenCapture = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      });
+
+      if (!videoRef.current) {
+        const video = document.createElement("video");
+        video.autoplay = true;
+        video.muted = true;
+        videoRef.current = video;
+      }
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+
+      setMediaStream(stream);
+
+      stream.getVideoTracks()[0].onended = () => {
+        setMediaStream(null);
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
+          videoRef.current = null;
+        }
+      };
+    } catch (error) {
+      console.error("Failed to get screen capture permission:", error);
+      setMediaStream(null);
+    }
+  };
+
+  const stopScreenCapture = () => {
+    if (mediaStream) {
+      mediaStream.getTracks().forEach((track) => track.stop());
+      setMediaStream(null);
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+        videoRef.current = null;
+      }
+    }
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const resizeCanvas = () => {
+      if (modelRef.current) {
+        const rect = modelRef.current.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+      }
+    };
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+    return () => window.removeEventListener("resize", resizeCanvas);
+  }, []);
+
+  const startDrawing = (e: React.MouseEvent) => {
+    if (!isDrawingActive) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDrawing(true);
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (ctx && canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+  };
+
+  const draw = (e: React.MouseEvent) => {
+    if (!isDrawing || !isDrawingActive) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (ctx && canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clearDrawing = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (ctx && canvas) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  };
+
+  const captureScreenshot = async () => {
+    if (!mediaStream || !videoRef.current) {
+      alert("Screen capture is not active. Please start screen sharing first.");
+      return;
+    }
+
+    const video = videoRef.current;
+    if (video.readyState < video.HAVE_METADATA) {
+      console.warn("Video not ready for screenshot yet.");
+      return;
+    }
+
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        throw new Error("Could not get canvas context");
+      }
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const screenshot = canvas.toDataURL("image/png");
+
+      const event = new CustomEvent("screenshot-captured", {
+        detail: { base64: screenshot },
+      });
+      window.dispatchEvent(event);
+    } catch (error) {
+      console.error("Failed to capture screenshot:", error);
+    }
+  };
+
+  const captureCanvasDrawing = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const dataUrl = canvas.toDataURL("image/png");
+
+      const event = new CustomEvent("screenshot-captured", {
+        detail: { base64: dataUrl },
+      });
+      window.dispatchEvent(event);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-900">
       {/* Left Panel - 3D Model Full Screen */}
-      <div className="flex-1 h-full relative">
-        <ModelContainer />
+      <div className="flex-1 h-full relative" ref={modelRef}>
+        <ModelContainer
+          isDrawingActive={isDrawingActive}
+          canvasRef={canvasRef as React.RefObject<HTMLCanvasElement>}
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+        />
+
+        {/* Drawing Controls */}
+        <div className="absolute top-4 left-4 z-30 flex gap-2">
+          <button
+            onClick={() => setIsDrawingActive(!isDrawingActive)}
+            className={`p-2 rounded-lg shadow-lg transition-all duration-200 ${
+              isDrawingActive
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : "bg-white text-gray-700 hover:bg-gray-100"
+            }`}
+            title={isDrawingActive ? "Disable Drawing" : "Enable Drawing"}
+          >
+            ✏️
+          </button>
+          {isDrawingActive && (
+            <>
+              <button
+                onClick={clearDrawing}
+                className="p-2 bg-white text-gray-700 rounded-lg shadow-lg hover:bg-gray-100 transition-all duration-200"
+                title="Clear Drawing"
+              >
+                🗑️
+              </button>
+              <button
+                onClick={captureCanvasDrawing}
+                className="p-2 bg-blue-500 text-white rounded-lg shadow-lg hover:bg-blue-600 transition-all duration-200"
+                title="Send Drawing to Chat"
+              >
+                💬
+              </button>
+              <button
+                onClick={captureScreenshot}
+                disabled={!mediaStream}
+                className={`p-2 rounded-lg shadow-lg transition-all duration-200 ${
+                  mediaStream
+                    ? "bg-white text-gray-700 hover:bg-gray-100"
+                    : "bg-gray-400 text-gray-600 cursor-not-allowed"
+                }`}
+                title={
+                  mediaStream
+                    ? "Take Screenshot"
+                    : "Start screen sharing to take screenshots"
+                }
+              >
+                📸
+              </button>
+            </>
+          )}
+          {/* Screen capture control button */}
+          {!mediaStream ? (
+            <button
+              onClick={startScreenCapture}
+              className="px-3 py-2 rounded-lg shadow-lg bg-green-500 text-white hover:bg-green-600 transition-all duration-200 text-xs font-semibold flex items-center gap-2"
+              title="Start screen sharing"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+              Start Sharing
+            </button>
+          ) : (
+            <button
+              onClick={stopScreenCapture}
+              className="px-3 py-2 rounded-lg shadow-lg bg-red-500 text-white hover:bg-red-600 transition-all duration-200 text-xs font-semibold flex items-center gap-2"
+              title="Stop screen sharing"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 12v3a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11.586l-2-2H5a4 4 0 00-4 4v10a4 4 0 004 4h14a4 4 0 004-4v-3"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M18 9l4-4m0 4l-4-4"
+                />
+              </svg>
+              Stop Sharing
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Right Panel - Chat */}
