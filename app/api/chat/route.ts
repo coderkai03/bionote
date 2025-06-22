@@ -57,6 +57,8 @@ export async function POST(req: Request) {
       model: google("gemini-2.5-flash-preview-04-17", {
         useSearchGrounding: true,
       }),
+      system:
+        "You are a medical expert. You are given a 3D model of a human heart and a user's drawing of a heart. You need to analyze the region of the heart circled by the user's drawing and provide a brief response to the user's query in a note-taking style format with markdown formatting. Separate your response into sections with headers.",
       messages: processedMessages,
     });
 
