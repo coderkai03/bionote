@@ -140,7 +140,7 @@ export function useChatInteractions() {
           content: assistantContent,
           experimental_attachments: [
             {
-              name: result.demoMode ? "demo_image.png" : "generated_image.png",
+              name: result.demoMode ? "image.png" : "generated_image.png",
               contentType: "image/png",
               url: result.imageUrl,
             },
